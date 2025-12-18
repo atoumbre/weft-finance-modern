@@ -1,0 +1,16 @@
+{
+    "name": "weft-liquidator",
+    "version": "1.0.0",
+    "scripts": {
+        "build": "tsc"
+    },
+    "dependencies": {
+        "@aws-sdk/client-sqs": "^3.450.0",
+        "@aws-sdk/client-cloudwatch": "^3.450.0",
+        "@radixdlt/babylon-gateway-api-sdk": "^1.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0"
+    }
+}
