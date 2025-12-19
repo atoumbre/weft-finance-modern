@@ -104,6 +104,62 @@ jobs:
         working-directory: terraform/ecr
         run: terraform apply -auto-approve
 
+
+  deploy-dispatcher:
+    # needs: filter
+    # if: needs.filter.outputs.dispatcher == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install PNPM
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.0"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      
+      - name: Bundle Dispatcher Lambda
+        working-directory: dispatcher
+        run: |
+          pnpm install
+          pnpm run bundle
+      
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_OUTPUT
+      
+      - name: Terraform Init
+        working-directory: terraform/dispatcher
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
+            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="key=dispatcher-mainnet.tfstate" \
+            -backend-config="region=us-east-1"
+      
+      - name: Select/Create Workspace
+        working-directory: terraform/dispatcher
+        run: terraform workspace select mainnet || terraform workspace new mainnet
+      
+      - name: Terraform Apply
+        working-directory: terraform/dispatcher
+        run: |
+          terraform apply \
+            -var-file="../app/mainnet.tfvars" \
+            -var="state_bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
+            -var="lock_table=weft-terraform-locks" \
+            -auto-approve
+
+
   # --- Application Container Jobs ---
 
   build-indexer:
@@ -227,56 +283,3 @@ jobs:
           TF_VAR_liquidation_seed_phrase: ${{ secrets.LIQUIDATION_SEED_PHRASE }}
         run: terraform apply -var-file="mainnet.tfvars" -auto-approve
 
-  deploy-dispatcher:
-    needs: filter
-    if: needs.filter.outputs.dispatcher == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install PNPM
-        run: corepack enable && corepack prepare pnpm@latest --activate
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.6.0"
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
-          aws-region: us-east-1
-      
-      - name: Bundle Dispatcher Lambda
-        working-directory: dispatcher
-        run: |
-          pnpm install
-          pnpm run bundle
-      
-      - name: Get AWS Account ID
-        id: account
-        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_OUTPUT
-      
-      - name: Terraform Init
-        working-directory: terraform/dispatcher
-        run: |
-          terraform init -reconfigure \
-            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
-            -backend-config="dynamodb_table=weft-terraform-locks" \
-            -backend-config="key=dispatcher-mainnet.tfstate" \
-            -backend-config="region=us-east-1"
-      
-      - name: Select/Create Workspace
-        working-directory: terraform/dispatcher
-        run: terraform workspace select mainnet || terraform workspace new mainnet
-      
-      - name: Terraform Apply
-        working-directory: terraform/dispatcher
-        run: |
-          terraform apply \
-            -var-file="../app/mainnet.tfvars" \
-            -var="state_bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
-            -var="lock_table=weft-terraform-locks" \
-            -auto-approve
