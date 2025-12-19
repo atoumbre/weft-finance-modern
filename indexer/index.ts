@@ -12,6 +12,7 @@ const gatewayApi = GatewayApiClient.initialize({
     applicationName: "Weft Indexer"
 });
 
+
 // Initialize Fetcher
 const fetcher = WeftLedgerSateFetcher.setInstance(gatewayApi);
 

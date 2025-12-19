@@ -369,6 +369,7 @@ resource "aws_ecs_task_definition" "liquidator" {
 
 
 
+
 resource "aws_cloudwatch_log_group" "liquidator" {
   name              = "/ecs/weft-${var.environment}-liquidator"
   retention_in_days = var.log_retention_days
