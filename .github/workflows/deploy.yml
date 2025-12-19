@@ -160,9 +160,9 @@ jobs:
   # --- Main Deployment Job ---
 
   deploy-app:
-    needs: [filter, build-indexer, build-liquidator]
+    needs: filter
     # Run if app infra changed OR if any image was rebuilt
-    if: always() && (needs.filter.outputs.app == 'true' || needs.build-indexer.result == 'success' || needs.build-liquidator.result == 'success')
+    if: needs.filter.outputs.app == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -225,8 +225,6 @@ jobs:
       - name: Terraform Apply
         working-directory: terraform/app
         env:
-          # TF_VAR_indexer_image_digest: ${{ steps.digests.outputs.indexer }}
-          # TF_VAR_liquidator_image_digest: ${{ steps.digests.outputs.liquidator }}
           TF_VAR_liquidation_seed_phrase: ${{ secrets.LIQUIDATION_SEED_PHRASE }}
         run: terraform apply -var-file="mainnet.tfvars" -auto-approve
 
