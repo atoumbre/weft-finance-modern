@@ -22,9 +22,16 @@ export_aws_credentials() {
 get_aws_account_id() {
     local account_id
     local error_output
+    local aws_cmd="aws sts get-caller-identity --query Account --output text"
+    
+    # In GitHub Actions or when using env vars, don't use --profile
+    # The aws-actions/configure-aws-credentials sets AWS_ACCESS_KEY_ID, etc.
+    if [ "$GITHUB_ACTIONS" != "true" ] && [ -z "$AWS_ACCESS_KEY_ID" ]; then
+        aws_cmd="$aws_cmd --profile $AWS_PROFILE"
+    fi
     
     # Capture both stdout and stderr
-    error_output=$(aws sts get-caller-identity --query Account --output text 2>&1)
+    error_output=$(eval $aws_cmd 2>&1)
     local exit_code=$?
     
     if [ $exit_code -ne 0 ]; then
