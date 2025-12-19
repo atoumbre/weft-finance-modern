@@ -4,11 +4,7 @@ import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 import { WeftLedgerSateFetcher } from "@weft-finance/ledger-state";
 
 
-// --- MOCKS FOR MISSING DEPENDENCIES or CONFIG ---
-// Assuming WeftLedgerSateFetcher internalizes the resource logic or we pass it
-// For the purpose of getting IDs, the fetcher likely knows the resource or configured via constructor
-// If not, we might need to pass it, but the interface 'getCdpIds(returnBurntTokens)' takes no resource arg.
-// -------------------------------------
+
 
 const sqs = new SQSClient({});
 const INDEXER_QUEUE_URL = process.env.INDEXER_QUEUE_URL!;
