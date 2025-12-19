@@ -248,7 +248,7 @@ resource "aws_ecs_task_definition" "indexer" {
 
   container_definitions = jsonencode([{
     name  = "indexer"
-    image = var.indexer_image_digest != "" ? "${data.aws_ecr_repository.indexer.repository_url}@${var.indexer_image_digest}" : data.aws_ecr_repository.indexer.repository_url
+    image = data.aws_ecr_repository.indexer.repository_url
     environment = [
       { name = "QUEUE_URL", value = aws_sqs_queue.indexer_queue.id },
       { name = "LIQUIDATION_QUEUE_URL", value = aws_sqs_queue.liquidation_queue.id },
@@ -344,7 +344,7 @@ resource "aws_ecs_task_definition" "liquidator" {
 
   container_definitions = jsonencode([{
     name  = "liquidator"
-    image = var.liquidator_image_digest != "" ? "${data.aws_ecr_repository.liquidator.repository_url}@${var.liquidator_image_digest}" : data.aws_ecr_repository.liquidator.repository_url
+    image = data.aws_ecr_repository.liquidator.repository_url
     environment = [
       { name = "LIQUIDATION_QUEUE_URL", value = aws_sqs_queue.liquidation_queue.id },
       { name = "RADIX_GATEWAY_URL", value = var.radix_gateway_url },

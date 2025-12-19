@@ -128,7 +128,7 @@ jobs:
           aws-region: us-east-1
       - name: Build & Push Indexer
         id: build
-        run: ./scripts/build-push.sh indexer ${{ github.sha }}
+        run: ./scripts/build-push.sh indexer # ${{ github.sha }}
 
   build-liquidator:
     needs: filter
@@ -155,7 +155,7 @@ jobs:
           aws-region: us-east-1
       - name: Build & Push Liquidator
         id: build
-        run: ./scripts/build-push.sh liquidator ${{ github.sha }}
+        run: ./scripts/build-push.sh liquidator # ${{ github.sha }}
 
   # --- Main Deployment Job ---
 
