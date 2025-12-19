@@ -157,6 +157,7 @@ resource "aws_iam_role_policy" "gha_scoped" {
           "logs:*",
           "ec2:*",
           "ssm:*",
+          "budgets:*",
           "sts:GetCallerIdentity"
         ]
         Resource = "*"
