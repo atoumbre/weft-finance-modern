@@ -11,10 +11,18 @@ export PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Fix for Terraform AWS Provider v5+ with SSO/Identity Center
 # Exports temporary AWS credentials for Terraform if not in GitHub Actions
 export_aws_credentials() {
-    if [ "$GITHUB_ACTIONS" != "true" ] && command -v aws >/dev/null 2>&1; then
+    # Skip in GitHub Actions - credentials are already in environment
+    if [ "$GITHUB_ACTIONS" = "true" ]; then
+        return 0
+    fi
+    
+    if command -v aws >/dev/null 2>&1; then
         echo "🔐 Exporting temporary AWS credentials..."
-        eval $(aws configure export-credentials --profile "$AWS_PROFILE" --format env 2>/dev/null) \
-            || echo "⚠️  Warning: Failed to export credentials via CLI. Continuing with default provider..."
+        # Only use --profile if AWS_ACCESS_KEY_ID is not already set
+        if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+            eval $(aws configure export-credentials --profile "$AWS_PROFILE" --format env 2>/dev/null) \
+                || echo "⚠️  Warning: Failed to export credentials via CLI. Continuing with default provider..."
+        fi
     fi
 }
 
