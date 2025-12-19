@@ -1,26 +1,16 @@
 
-import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand, SendMessageCommand } from "@aws-sdk/client-sqs";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteMessageCommand, ReceiveMessageCommand, SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 import { WeftLedgerSateFetcher } from "@weft-finance/ledger-state";
-// import { CollateralizeDebtPositionData, FetchResult } from "@weft-finance/types"; // Assuming types are exported or we infer
+import Decimal from "decimal.js";
 
-// --- Types Stub if not exported by package ---
-// Ideally we import these. Use 'any' if package types aren't easily reachable without node_modules analysis.
-// For now, I'll rely on TS inference where possible, or minimal definitions.
-interface CollateralizeDebtPositionData {
-    id: string; // The interface says getSingleCdp returns this. Check what fields it has.
-    // Stubbing minimum fields we guessed earlier, replacing if package differs
-    collateral_amount?: any;
-    debt_amount?: any;
-    [key: string]: any;
-}
 // ---------------------------------------------
 
 const sqs = new SQSClient({});
 const s3 = new S3Client({});
 const gatewayApi = GatewayApiClient.initialize({
-    basePath: "https://mainnet.radixdlt.com",
+    basePath: process.env.RADIX_GATEWAY_URL || "https://mainnet.radixdlt.com",
     applicationName: "Weft Indexer"
 });
 
@@ -31,10 +21,8 @@ const QUEUE_URL = process.env.QUEUE_URL!;
 const LIQUIDATION_QUEUE_URL = process.env.LIQUIDATION_QUEUE_URL!;
 const BUCKET_NAME = process.env.BUCKET_NAME!;
 
-function checkRisk(cdp: CollateralizeDebtPositionData): boolean {
-    // Implement logic specific to the data returned by WeftLedgerSateFetcher
-    // Placeholder
-    return false;
+function checkRisk(cdp: { liquidationLtv: Decimal }): boolean {
+    return cdp.liquidationLtv.gte(1);
 }
 
 async function processMessage(message: any) {
@@ -51,7 +39,7 @@ async function processMessage(message: any) {
         // Use the package method
         // Method signature: getMultipleCdp(ids: string[], options?: ...)
         const result = await fetcher.getMultipleCdp(ids, {
-            cdpPerBatch: 10,
+            cdpPerBatch: 50,
             onProgress: (fetched) => console.log(`Fetched ${fetched}/${ids.length}`)
         });
 
@@ -59,7 +47,13 @@ async function processMessage(message: any) {
         const cdps = result.data;
 
         // 2. Save to S3
-        const key = `cdp-data/${Date.now()}-${Math.random()}.json`;
+        const now = new Date();
+        const year = now.getUTCFullYear();
+        const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(now.getUTCDate()).padStart(2, '0');
+
+        const key = `cdp-data/${year}/${month}/${day}/cdp-batch-${Date.now()}.json`;
+
         await s3.send(new PutObjectCommand({
             Bucket: BUCKET_NAME,
             Key: key,
@@ -70,7 +64,7 @@ async function processMessage(message: any) {
 
         // 3. Check Liquidation
         // Using 'any' casting if types aren't strictly known yet
-        const atRiskCdps = (cdps as any[]).filter(checkRisk);
+        const atRiskCdps = (cdps).filter(checkRisk);
 
         if (atRiskCdps.length > 0) {
             console.log(`Found ${atRiskCdps.length} at-risk CDPs. Sending to Liquidation Queue.`);
@@ -78,7 +72,7 @@ async function processMessage(message: any) {
             await sqs.send(new SendMessageCommand({
                 QueueUrl: LIQUIDATION_QUEUE_URL,
                 MessageBody: JSON.stringify({
-                    cdpIds: atRiskCdps.map(c => c.id || c.cdp_id), // guess ID field name
+                    cdpIds: atRiskCdps.map(c => c.id), // guess ID field name
                     reason: "High LTV"
                 })
             }));

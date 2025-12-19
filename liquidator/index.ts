@@ -3,7 +3,7 @@ import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } from "@aws-sdk
 import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 
 // --- MOCKS ---
-const LENDING_MARKET_COMPONENT = "component_rdx1cpy6putj5p7937clqgcgutza7k53zpha039n9u5hkk0ahh4stdmq4w";
+const LENDING_MARKET_COMPONENT = process.env.LENDING_MARKET_COMPONENT!;
 const createBaseTransactionParams = () => ({
     start_epoch: 100,
     end_epoch: 110,
@@ -15,7 +15,7 @@ const createBaseTransactionParams = () => ({
 
 const sqs = new SQSClient({});
 const gatewayApi = GatewayApiClient.initialize({
-    basePath: "https://mainnet.radixdlt.com",
+    basePath: process.env.RADIX_GATEWAY_URL || "https://mainnet.radixdlt.com",
     applicationName: "Weft Liquidator"
 });
 
@@ -72,11 +72,17 @@ async function main() {
 
             if (Messages) {
                 for (const msg of Messages) {
-                    await processMessage(msg);
-                    await sqs.send(new DeleteMessageCommand({
-                        QueueUrl: QUEUE_URL,
-                        ReceiptHandle: msg.ReceiptHandle
-                    }));
+                    try {
+                        await processMessage(msg);
+                        // Only delete if successful
+                        await sqs.send(new DeleteMessageCommand({
+                            QueueUrl: QUEUE_URL,
+                            ReceiptHandle: msg.ReceiptHandle
+                        }));
+                        console.log(`Processed and deleted message: ${msg.MessageId}`);
+                    } catch (e) {
+                        console.error(`Failed to process message ${msg.MessageId}. Letting it timeout back to queue. Error:`, e);
+                    }
                 }
             }
         } catch (error) {

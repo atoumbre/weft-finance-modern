@@ -1,0 +1,195 @@
+name: Deploy Weft Finance
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
+jobs:
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      indexer: ${{ steps.filter.outputs.indexer }}
+      liquidator: ${{ steps.filter.outputs.liquidator }}
+      app: ${{ steps.filter.outputs.app }}
+      dispatcher: ${{ steps.filter.outputs.dispatcher }}
+      bootstrap: ${{ steps.filter.outputs.bootstrap }}
+      ecr: ${{ steps.filter.outputs.ecr }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            indexer:
+              - 'indexer/**'
+            liquidator:
+              - 'liquidator/**'
+            app:
+              - 'terraform/app/**'
+              - 'scripts/deploy-app.sh'
+            dispatcher:
+              - 'dispatcher/**'
+              - 'terraform/dispatcher/**'
+              - 'scripts/deploy-dispatcher.sh'
+            bootstrap:
+              - 'terraform/bootstrap/**'
+              - 'scripts/deploy-bootstrap.sh'
+            ecr:
+              - 'terraform/ecr/**'
+              - 'scripts/deploy-ecr.sh'
+
+  # --- Infrastructure Jobs (Independent) ---
+
+  deploy-bootstrap:
+    needs: filter
+    if: needs.filter.outputs.bootstrap == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      - name: Deploy Bootstrap
+        run: ./scripts/deploy-bootstrap.sh
+
+  deploy-ecr:
+    needs: filter
+    if: needs.filter.outputs.ecr == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      - name: Deploy ECR
+        run: ./scripts/deploy-ecr.sh
+
+  # --- Application Container Jobs ---
+
+  build-indexer:
+    needs: filter
+    if: needs.filter.outputs.indexer == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.indexer_digest }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install PNPM
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      - name: Build & Push Indexer
+        id: build
+        run: ./scripts/build-push.sh indexer ${{ github.sha }}
+
+  build-liquidator:
+    needs: filter
+    if: needs.filter.outputs.liquidator == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.liquidator_digest }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install PNPM
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      - name: Build & Push Liquidator
+        id: build
+        run: ./scripts/build-push.sh liquidator ${{ github.sha }}
+
+  # --- Main Deployment Job ---
+
+  deploy-app:
+    needs: [filter, build-indexer, build-liquidator]
+    # Run if app infra changed OR if any image was rebuilt
+    if: always() && (needs.filter.outputs.app == 'true' || needs.build-indexer.result == 'success' || needs.build-liquidator.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install PNPM
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      
+      - name: Resolve Image Digests
+        id: digests
+        run: |
+          # Fetch digests if jobs were skipped
+          INDEXER="${{ needs.build-indexer.outputs.digest }}"
+          if [ -z "$INDEXER" ]; then
+            INDEXER=$(./scripts/build-push.sh get-digest indexer latest)
+          fi
+          
+          LIQUIDATOR="${{ needs.build-liquidator.outputs.digest }}"
+          if [ -z "$LIQUIDATOR" ]; then
+            LIQUIDATOR=$(./scripts/build-push.sh get-digest liquidator latest)
+          fi
+          
+          echo "indexer=$INDEXER" >> $GITHUB_OUTPUT
+          echo "liquidator=$LIQUIDATOR" >> $GITHUB_OUTPUT
+
+      - name: Deploy Application
+        env:
+          TF_VAR_indexer_image_digest: ${{ steps.digests.outputs.indexer }}
+          TF_VAR_liquidator_image_digest: ${{ steps.digests.outputs.liquidator }}
+          TF_VAR_liquidation_seed_phrase: ${{ secrets.LIQUIDATION_SEED_PHRASE }}
+        run: ./scripts/deploy-app.sh mainnet
+
+  deploy-dispatcher:
+    needs: filter
+    if: needs.filter.outputs.dispatcher == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install PNPM
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      
+      - name: Deploy Dispatcher
+        run: ./scripts/deploy-dispatcher.sh mainnet

@@ -14,8 +14,9 @@ const sqs = new SQSClient({});
 const INDEXER_QUEUE_URL = process.env.INDEXER_QUEUE_URL!;
 
 // Initialize Gateway API
+const RADIX_GATEWAY_URL = process.env.RADIX_GATEWAY_URL || "https://mainnet.radixdlt.com";
 const gatewayApi = GatewayApiClient.initialize({
-    basePath: "https://mainnet.radixdlt.com",
+    basePath: RADIX_GATEWAY_URL,
     applicationName: "Weft Dispatcher"
 });
 

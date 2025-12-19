@@ -25,6 +25,8 @@ pnpm-debug.log*
 *.tfstate.backup
 *.tfvars
 !example.tfvars
+!mainnet.tfvars
+!stokenet.tfvars
 .terraform.lock.hcl
 
 # IDEs
