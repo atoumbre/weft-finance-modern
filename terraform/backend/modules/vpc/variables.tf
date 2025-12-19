@@ -1,7 +1,3 @@
-variable "aws_region" {
-  description = "AWS region (used for VPC endpoint service names)"
-  type        = string
-}
 
 variable "environment" {
   description = "Environment name (e.g. mainnet, stokenet)"
