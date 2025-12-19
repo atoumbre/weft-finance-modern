@@ -13,6 +13,7 @@ const createBaseTransactionParams = () => ({
 });
 // -------------
 
+
 const sqs = new SQSClient({});
 const gatewayApi = GatewayApiClient.initialize({
     basePath: process.env.RADIX_GATEWAY_URL || "https://mainnet.radixdlt.com",
