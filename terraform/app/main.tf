@@ -454,6 +454,7 @@ resource "aws_iam_role" "dispatcher_lambda_role" {
   })
 }
 
+
 resource "aws_iam_role_policy_attachment" "dispatcher_lambda_basic" {
   role       = aws_iam_role.dispatcher_lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
