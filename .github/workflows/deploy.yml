@@ -45,8 +45,8 @@ jobs:
   # --- Infrastructure Jobs (Independent) ---
 
   deploy-bootstrap:
-    needs: filter
-    if: needs.filter.outputs.bootstrap == 'true'
+    # needs: filter
+    # if: needs.filter.outputs.bootstrap == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,12 +59,26 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
           aws-region: us-east-1
-      - name: Deploy Bootstrap
-        run: ./scripts/deploy-bootstrap.sh
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_OUTPUT
+      
+      - name: Terraform Init
+        working-directory: terraform/bootstrap
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
+            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="key=bootstrap.tfstate" \
+            -backend-config="region=us-east-1"
+      
+      - name: Terraform Apply
+        working-directory: terraform/bootstrap
+        run: terraform apply -auto-approve
 
   deploy-ecr:
-    needs: filter
-    if: needs.filter.outputs.ecr == 'true'
+    # needs: filter
+    # if: needs.filter.outputs.ecr == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,8 +91,22 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
           aws-region: us-east-1
-      - name: Deploy ECR
-        run: ./scripts/deploy-ecr.sh
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_OUTPUT
+      
+      - name: Terraform Init
+        working-directory: terraform/ecr
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
+            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="key=ecr.tfstate" \
+            -backend-config="region=us-east-1"
+      
+      - name: Terraform Apply
+        working-directory: terraform/ecr
+        run: terraform apply -auto-approve
 
   # --- Application Container Jobs ---
 
@@ -178,12 +206,30 @@ jobs:
           echo "indexer=$INDEXER" >> $GITHUB_OUTPUT
           echo "liquidator=$LIQUIDATOR" >> $GITHUB_OUTPUT
 
-      - name: Deploy Application
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_OUTPUT
+      
+      - name: Terraform Init
+        working-directory: terraform/app
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
+            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="key=weft-mainnet.tfstate" \
+            -backend-config="region=us-east-1"
+      
+      - name: Select/Create Workspace
+        working-directory: terraform/app
+        run: terraform workspace select mainnet || terraform workspace new mainnet
+      
+      - name: Terraform Apply
+        working-directory: terraform/app
         env:
           TF_VAR_indexer_image_digest: ${{ steps.digests.outputs.indexer }}
           TF_VAR_liquidator_image_digest: ${{ steps.digests.outputs.liquidator }}
           TF_VAR_liquidation_seed_phrase: ${{ secrets.LIQUIDATION_SEED_PHRASE }}
-        run: ./scripts/deploy-app.sh mainnet
+        run: terraform apply -var-file="mainnet.tfvars" -auto-approve
 
   deploy-dispatcher:
     needs: filter
@@ -207,5 +253,34 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
           aws-region: us-east-1
       
-      - name: Deploy Dispatcher
-        run: ./scripts/deploy-dispatcher.sh mainnet
+      - name: Bundle Dispatcher Lambda
+        working-directory: dispatcher
+        run: |
+          pnpm install
+          pnpm run bundle
+      
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_OUTPUT
+      
+      - name: Terraform Init
+        working-directory: terraform/dispatcher
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
+            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="key=dispatcher-mainnet.tfstate" \
+            -backend-config="region=us-east-1"
+      
+      - name: Select/Create Workspace
+        working-directory: terraform/dispatcher
+        run: terraform workspace select mainnet || terraform workspace new mainnet
+      
+      - name: Terraform Apply
+        working-directory: terraform/dispatcher
+        run: |
+          terraform apply \
+            -var-file="../app/mainnet.tfvars" \
+            -var="state_bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
+            -var="lock_table=weft-terraform-locks" \
+            -auto-approve
