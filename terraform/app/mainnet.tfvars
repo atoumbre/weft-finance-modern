@@ -41,7 +41,7 @@ ecs_indexer_scale_in_cooldown    = 60
 
 # Liquidator Auto Scaling
 
-ecs_liquidator_min_capacity         = 0
+ecs_liquidator_min_capacity         = 1
 ecs_liquidator_max_capacity         = 5
 ecs_liquidator_scaling_target_value = 10.0
 ecs_liquidator_scale_out_cooldown   = 30
