@@ -15,7 +15,7 @@ fi
 
 setup_terraform_env
 
-echo "=== Weft Finance APP Deployment ==="
+echo "=== Weft Finance Backend Deployment ==="
 echo "Environment: ${ENV}"
 echo "AWS Region: ${AWS_REGION}"
 echo "Account ID: ${ACCOUNT_ID}"
@@ -75,7 +75,7 @@ cd "${SCRIPT_DIR}"
 # Step 3: Application Infrastructure - Environment Specific
 echo ""
 echo "--- 3. Deploying Application Infrastructure [${ENV}] ---"
-cd "${PROJECT_ROOT}/terraform/app"
+cd "${PROJECT_ROOT}/terraform/backend"
 
 # Initialize with Remote Backend Config
 tf_init "weft-${ENV}.tfstate"
@@ -88,4 +88,4 @@ terraform apply -var-file="${ENV}.tfvars" -auto-approve
 cd "${SCRIPT_DIR}"
 
 echo ""
-echo "✅ App Deployment Complete for ${ENV}!"
+echo "✅ Backend Deployment Complete for ${ENV}!"

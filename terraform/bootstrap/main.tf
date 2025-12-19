@@ -5,6 +5,8 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {}
 }
 
 provider "aws" {
@@ -59,6 +61,51 @@ resource "aws_budgets_budget" "monthly" {
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "weft-terraform-state-${data.aws_caller_identity.current.account_id}"
   # force_destroy = false # Safety for production
+}
+
+resource "aws_s3_bucket_public_access_block" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+data "aws_iam_policy_document" "terraform_state_bucket_policy" {
+  statement {
+    sid     = "DenyInsecureTransport"
+    effect  = "Deny"
+    actions = ["s3:*"]
+    resources = [
+      aws_s3_bucket.terraform_state.arn,
+      "${aws_s3_bucket.terraform_state.arn}/*"
+    ]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  policy = data.aws_iam_policy_document.terraform_state_bucket_policy.json
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
@@ -122,7 +169,7 @@ resource "aws_iam_role" "github_actions" {
         }
         Condition = {
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:*"
+            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/main"
           }
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"

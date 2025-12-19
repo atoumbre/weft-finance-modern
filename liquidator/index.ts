@@ -8,7 +8,7 @@ const LENDING_MARKET_COMPONENT = process.env.LENDING_MARKET_COMPONENT!;
 
 const sqs = new SQSClient({});
 const gatewayApi = GatewayApiClient.initialize({
-    basePath: process.env.RADIX_GATEWAY_URL || "https://mainnet.radixdlt.com",
+    basePath: process.env.RADIX_GATEWAY_URL,
     applicationName: "Weft Liquidator"
 });
 

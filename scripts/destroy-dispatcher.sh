@@ -32,7 +32,7 @@ terraform workspace select ${ENV}
 
 # Destroy with shared config and state details
 terraform destroy \
-    -var-file="../app/${ENV}.tfvars" \
+    -var-file="../backend/${ENV}.tfvars" \
     -var="state_bucket=${STATE_BUCKET}" \
     -var="lock_table=${DYNAMODB_TABLE}" \
     -auto-approve

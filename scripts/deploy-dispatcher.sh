@@ -41,10 +41,10 @@ tf_init "dispatcher-${ENV}.tfstate"
 # Select or Create Workspace
 terraform workspace select ${ENV} || terraform workspace new ${ENV}
 
-# Apply with specific var file from the app directory (shared config)
+# Apply with specific var file from the backend directory (shared config)
 # Also passing the state bucket and lock table for terraform_remote_state lookup
 terraform apply \
-    -var-file="../app/${ENV}.tfvars" \
+    -var-file="../backend/${ENV}.tfvars" \
     -var="state_bucket=${STATE_BUCKET}" \
     -var="lock_table=${DYNAMODB_TABLE}" \
     -auto-approve

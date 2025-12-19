@@ -37,29 +37,37 @@ variable "ssm_parameter_name_seed_phrase" {
 }
 
 # --- ECS Resource Sizing ---
+
 variable "ecs_indexer_cpu" {
   description = "CPU units for indexer task"
 }
+
 variable "ecs_indexer_memory" {
   description = "Memory for indexer task"
 }
+
 variable "ecs_liquidator_cpu" {
   description = "CPU units for liquidator task"
 }
+
 variable "ecs_liquidator_memory" {
   description = "Memory for liquidator task"
 }
 
 # --- Auto Scaling Configuration ---
+
 variable "ecs_indexer_min_capacity" {
   description = "Minimum tasks for indexer"
 }
+
 variable "ecs_indexer_max_capacity" {
   description = "Maximum tasks for indexer"
 }
+
 variable "ecs_liquidator_min_capacity" {
   description = "Minimum tasks for liquidator"
 }
+
 variable "ecs_liquidator_max_capacity" {
   description = "Maximum tasks for liquidator"
 }
@@ -67,24 +75,29 @@ variable "ecs_liquidator_max_capacity" {
 variable "ecs_indexer_scaling_target_value" {
   description = "SQS messages per task for indexer scaling"
 }
+
 variable "ecs_liquidator_scaling_target_value" {
   description = "SQS messages per task for liquidator scaling"
 }
 
 variable "ecs_indexer_scale_out_cooldown" {
-  description = "Cooldown after scale out for indexer"
+  description = "Cool down after scale out for indexer"
 }
+
 variable "ecs_indexer_scale_in_cooldown" {
-  description = "Cooldown after scale in for indexer"
+  description = "Cool down after scale in for indexer"
 }
+
 variable "ecs_liquidator_scale_out_cooldown" {
-  description = "Cooldown after scale out for liquidator"
+  description = "Cool down after scale out for liquidator"
 }
+
 variable "ecs_liquidator_scale_in_cooldown" {
-  description = "Cooldown after scale in for liquidator"
+  description = "Cool down after scale in for liquidator"
 }
 
 # --- Operational Settings ---
+
 variable "log_retention_days" {
   description = "CloudWatch log retention in days"
 }
@@ -92,24 +105,13 @@ variable "log_retention_days" {
 variable "sqs_visibility_timeout" {
   description = "Visibility timeout for SQS queues in seconds"
 }
+
 variable "sqs_max_receive_count" {
   description = "Max receive count before moving to DLQ"
 }
 
-# --- Image Management ---
-variable "indexer_image_digest" {
-  description = "SHA256 digest of the indexer image (e.g. sha256:...)"
-  type        = string
-  default     = ""
-}
-
-variable "liquidator_image_digest" {
-  description = "SHA256 digest of the liquidator image (e.g. sha256:...)"
-  type        = string
-  default     = ""
-}
-
 # --- Dispatcher Configuration ---
+
 variable "dispatcher_schedule" {
   description = "Schedule expression for dispatcher (e.g. rate(5 minutes))"
   type        = string

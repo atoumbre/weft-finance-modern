@@ -8,9 +8,9 @@ if [ -z "$ENV" ]; then
     exit 1
 fi
 
-echo "=== Weft Finance APP DESTRUCTION ==="
+echo "=== Weft Finance Backend DESTRUCTION ==="
 echo "Environment: ${ENV}"
-echo "⚠️  WARNING: This will DESTROY all application resources for ${ENV}."
+echo "⚠️  WARNING: This will DESTROY all backend resources for ${ENV}."
 read -p "Are you sure? [y/N] " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -51,7 +51,7 @@ echo "State Bucket: ${STATE_BUCKET}"
 # 2. Destroy Application Infrastructure
 echo ""
 echo "--- Destroying Application Infrastructure [${ENV}] ---"
-cd "${PROJECT_ROOT}/terraform/app"
+cd "${PROJECT_ROOT}/terraform/backend"
 
 # Connect to Remote State (same as deploy)
 tf_init "weft-${ENV}.tfstate"
@@ -82,4 +82,4 @@ aws s3 rm "s3://${STATE_BUCKET}/env:/${ENV}/weft-${ENV}.tfstate" || true
 
 cd "${SCRIPT_DIR}"
 
-echo "✅ App Infrastructure for ${ENV} destroyed."
+echo "✅ Backend Infrastructure for ${ENV} destroyed."
