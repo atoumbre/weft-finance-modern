@@ -188,22 +188,22 @@ jobs:
           pnpm install
           pnpm run bundle
       
-      - name: Resolve Image Digests
-        id: digests
-        run: |
-          # Fetch digests if jobs were skipped
-          INDEXER="${{ needs.build-indexer.outputs.digest }}"
-          if [ -z "$INDEXER" ]; then
-            INDEXER=$(./scripts/build-push.sh get-digest indexer latest)
-          fi
+      # - name: Resolve Image Digests
+      #   id: digests
+      #   run: |
+      #     # Fetch digests if jobs were skipped
+      #     INDEXER="${{ needs.build-indexer.outputs.digest }}"
+      #     if [ -z "$INDEXER" ]; then
+      #       INDEXER=$(./scripts/build-push.sh get-digest indexer latest)
+      #     fi
           
-          LIQUIDATOR="${{ needs.build-liquidator.outputs.digest }}"
-          if [ -z "$LIQUIDATOR" ]; then
-            LIQUIDATOR=$(./scripts/build-push.sh get-digest liquidator latest)
-          fi
+      #     LIQUIDATOR="${{ needs.build-liquidator.outputs.digest }}"
+      #     if [ -z "$LIQUIDATOR" ]; then
+      #       LIQUIDATOR=$(./scripts/build-push.sh get-digest liquidator latest)
+      #     fi
           
-          echo "indexer=$INDEXER" >> $GITHUB_OUTPUT
-          echo "liquidator=$LIQUIDATOR" >> $GITHUB_OUTPUT
+      #     echo "indexer=$INDEXER" >> $GITHUB_OUTPUT
+      #     echo "liquidator=$LIQUIDATOR" >> $GITHUB_OUTPUT
 
       - name: Get AWS Account ID
         id: account
@@ -225,8 +225,8 @@ jobs:
       - name: Terraform Apply
         working-directory: terraform/app
         env:
-          TF_VAR_indexer_image_digest: ${{ steps.digests.outputs.indexer }}
-          TF_VAR_liquidator_image_digest: ${{ steps.digests.outputs.liquidator }}
+          # TF_VAR_indexer_image_digest: ${{ steps.digests.outputs.indexer }}
+          # TF_VAR_liquidator_image_digest: ${{ steps.digests.outputs.liquidator }}
           TF_VAR_liquidation_seed_phrase: ${{ secrets.LIQUIDATION_SEED_PHRASE }}
         run: terraform apply -var-file="mainnet.tfvars" -auto-approve
 
