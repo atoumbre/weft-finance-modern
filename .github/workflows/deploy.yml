@@ -107,8 +107,8 @@ jobs:
   # --- Application Container Jobs ---
 
   build-indexer:
-    needs: filter
-    if: needs.filter.outputs.indexer == 'true'
+    # needs: filter
+    # if: needs.filter.outputs.indexer == 'true'
     runs-on: ubuntu-latest
     outputs:
       digest: ${{ steps.build.outputs.indexer_digest }}
@@ -134,8 +134,8 @@ jobs:
         run: ./scripts/build-push.sh indexer ${{ github.sha }}
 
   build-liquidator:
-    needs: filter
-    if: needs.filter.outputs.liquidator == 'true'
+    # needs: filter
+    # if: needs.filter.outputs.liquidator == 'true'
     runs-on: ubuntu-latest
     outputs:
       digest: ${{ steps.build.outputs.liquidator_digest }}
