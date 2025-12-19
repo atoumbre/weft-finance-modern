@@ -475,7 +475,7 @@ resource "aws_lambda_function" "dispatcher" {
   function_name    = "weft-${var.environment}-dispatcher"
   role             = aws_iam_role.dispatcher_lambda_role.arn
   handler          = "dist/index.handler"
-  runtime          = "nodejs20.x"
+  runtime          = "nodejs24.x"
   timeout          = var.dispatcher_timeout
   memory_size      = var.dispatcher_memory
   source_code_hash = data.archive_file.dispatcher_zip.output_base64sha256
