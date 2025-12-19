@@ -2,7 +2,14 @@
 
 # Standardize Profile and Region
 export AWS_REGION="${AWS_REGION:-us-east-1}"
-export AWS_PROFILE="${AWS_PROFILE:-default}"
+
+# In GitHub Actions, credentials come from environment variables
+# Unset AWS_PROFILE to prevent AWS CLI from looking for config files
+if [ "$GITHUB_ACTIONS" = "true" ]; then
+    unset AWS_PROFILE
+else
+    export AWS_PROFILE="${AWS_PROFILE:-default}"
+fi
 
 # Path navigation - export so available to calling scripts
 export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -30,17 +30,13 @@ jobs:
               - 'liquidator/**'
             app:
               - 'terraform/app/**'
-              - 'scripts/deploy-app.sh'
             dispatcher:
               - 'dispatcher/**'
               - 'terraform/dispatcher/**'
-              - 'scripts/deploy-dispatcher.sh'
             bootstrap:
               - 'terraform/bootstrap/**'
-              - 'scripts/deploy-bootstrap.sh'
             ecr:
               - 'terraform/ecr/**'
-              - 'scripts/deploy-ecr.sh'
 
   # --- Infrastructure Jobs (Independent) ---
 
