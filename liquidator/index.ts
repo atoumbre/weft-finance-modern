@@ -2,18 +2,8 @@
 import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } from "@aws-sdk/client-sqs";
 import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 
-// --- MOCKS ---
+
 const LENDING_MARKET_COMPONENT = process.env.LENDING_MARKET_COMPONENT!;
-const createBaseTransactionParams = () => ({
-    start_epoch: 100,
-    end_epoch: 110,
-    nonce: Math.floor(Math.random() * 100000),
-    signer_public_keys: [],
-    flags: { use_free_storage: true } as any
-});
-// -------------
-
-
 
 
 const sqs = new SQSClient({});

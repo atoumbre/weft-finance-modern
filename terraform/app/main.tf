@@ -127,7 +127,7 @@ resource "aws_ecs_cluster" "main" {
 
 resource "aws_ecs_cluster_capacity_providers" "main" {
   cluster_name       = aws_ecs_cluster.main.name
-  capacity_providers = ["FARGATE", "FARGATE_SPOT"]
+  capacity_providers = ["FARGATE_SPOT"]
   default_capacity_provider_strategy {
     base              = 1
     weight            = 100
@@ -380,11 +380,6 @@ resource "aws_ecs_service" "liquidator" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.liquidator.arn
   desired_count   = 1
-  capacity_provider_strategy {
-    capacity_provider = "FARGATE"
-    base              = 1
-    weight            = 0
-  }
 
   capacity_provider_strategy {
     capacity_provider = "FARGATE_SPOT"
