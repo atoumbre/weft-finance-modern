@@ -37,7 +37,11 @@ EOF
     
     # 4. Migrate Local State -> Remote S3
     echo "Migrating local state to S3..."
-    tf_init "bootstrap.tfstate"
+    terraform init -migrate-state -force-copy \
+        -backend-config="bucket=${STATE_BUCKET}" \
+        -backend-config="dynamodb_table=${DYNAMODB_TABLE}" \
+        -backend-config="key=bootstrap.tfstate" \
+        -backend-config="region=${AWS_REGION}"
 fi
 
 # Final Apply to ensure everything is sync

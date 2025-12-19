@@ -22,6 +22,33 @@ echo "AWS Region: ${AWS_REGION}"
 echo "Account ID: ${ACCOUNT_ID}"
 echo "=========================="
 
+# --- Emergency Manual Cleanup Function ---
+manual_cleanup() {
+    echo ""
+    echo "🚨 EMERGENCY MANUAL CLEANUP 🚨"
+    echo "Terraform is broken, cleaning up via AWS CLI..."
+    
+    # 1. Delete ECR Repos
+    echo "🗑️  Deleting ECR Repositories..."
+    aws ecr delete-repository --repository-name weft-indexer --force >/dev/null 2>&1 || true
+    aws ecr delete-repository --repository-name weft-liquidator --force >/dev/null 2>&1 || true
+    
+    # 2. Delete S3 State Bucket
+    echo "🗑️  Deleting State Bucket ${STATE_BUCKET}..."
+    aws s3 rb s3://${STATE_BUCKET} --force >/dev/null 2>&1 || true
+    
+    # 3. Delete DynamoDB Table
+    echo "🗑️  Deleting DynamoDB Table ${DYNAMODB_TABLE}..."
+    aws dynamodb delete-table --table-name ${DYNAMODB_TABLE} >/dev/null 2>&1 || true
+    
+    # 4. Local Cleanup
+    echo "🗑️  Cleaning up local files..."
+    rm -f backend.tf backend.tf.backup
+    rm -rf .terraform .terraform.lock.hcl
+    
+    echo "✅ Manual cleanup complete."
+    exit 0
+}
 
 echo ""
 echo "--- Initializing Bootstrap State ---"

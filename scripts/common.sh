@@ -4,9 +4,9 @@
 export AWS_REGION="${AWS_REGION:-us-east-1}"
 export AWS_PROFILE="${AWS_PROFILE:-default}"
 
-# Path navigation
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Path navigation - export so available to calling scripts
+export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Fix for Terraform AWS Provider v5+ with SSO/Identity Center
 # Exports temporary AWS credentials for Terraform if not in GitHub Actions

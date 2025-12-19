@@ -10,7 +10,7 @@ fi
 
 echo "=== Weft Finance DISPATCHER DESTRUCTION ==="
 echo "Environment: ${ENV}"
-echo "⚠️  WARNING: This will DESTROY the Dispatcher Lambda and его schedule for ${ENV}."
+echo "⚠️  WARNING: This will DESTROY the Dispatcher Lambda and its schedule for ${ENV}."
 read -p "Are you sure? [y/N] " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
