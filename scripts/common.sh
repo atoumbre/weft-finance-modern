@@ -21,11 +21,25 @@ export_aws_credentials() {
 # Get AWS Account ID
 get_aws_account_id() {
     local account_id
-    account_id=$(aws sts get-caller-identity --query Account --output text 2>/dev/null)
-    if [ -z "$account_id" ]; then
+    local error_output
+    
+    # Capture both stdout and stderr
+    error_output=$(aws sts get-caller-identity --query Account --output text 2>&1)
+    local exit_code=$?
+    
+    if [ $exit_code -ne 0 ]; then
         echo "❌ ERROR: Could not authenticate with AWS." >&2
+        echo "   AWS CLI Error: $error_output" >&2
         return 1
     fi
+    
+    account_id="$error_output"
+    
+    if [ -z "$account_id" ] || [ "$account_id" = "None" ]; then
+        echo "❌ ERROR: Could not retrieve AWS Account ID." >&2
+        return 1
+    fi
+    
     echo "$account_id"
 }
 
