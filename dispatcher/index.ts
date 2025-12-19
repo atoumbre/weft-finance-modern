@@ -20,6 +20,7 @@ const gatewayApi = GatewayApiClient.initialize({
     applicationName: "Weft Dispatcher"
 });
 
+
 // Initialize Fetcher
 const fetcher = WeftLedgerSateFetcher.setInstance(gatewayApi);
 
