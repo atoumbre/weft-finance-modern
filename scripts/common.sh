@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Prevent commands from using interactive pagers
+export PAGER=cat
+
 # Standardize Profile and Region
 export AWS_REGION="${AWS_REGION:-us-east-1}"
 

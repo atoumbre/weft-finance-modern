@@ -57,9 +57,24 @@ check_image "indexer"
 check_image "liquidator"
 echo "✅ All required images found in ECR."
 
-# Step 2: Application Infrastructure - Environment Specific
+# Step 2: Bundle Dispatcher Lambda
 echo ""
-echo "--- 2. Deploying Application Infrastructure [${ENV}] ---"
+echo "--- 2. Bundling Dispatcher Lambda ---"
+cd "${PROJECT_ROOT}/dispatcher"
+if [ -f "pnpm-lock.yaml" ]; then
+    corepack enable
+    pnpm install
+    pnpm run bundle
+    echo "✅ Dispatcher Lambda bundled."
+else
+    echo "❌ ERROR: dispatcher/pnpm-lock.yaml not found."
+    exit 1
+fi
+cd "${SCRIPT_DIR}"
+
+# Step 3: Application Infrastructure - Environment Specific
+echo ""
+echo "--- 3. Deploying Application Infrastructure [${ENV}] ---"
 cd "${PROJECT_ROOT}/terraform/app"
 
 # Initialize with Remote Backend Config
