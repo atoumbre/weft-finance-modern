@@ -3,9 +3,6 @@ import { SQSClient, SendMessageBatchCommand } from "@aws-sdk/client-sqs";
 import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 import { WeftLedgerSateFetcher } from "@weft-finance/ledger-state";
 
-
-
-
 const sqs = new SQSClient({});
 const INDEXER_QUEUE_URL = process.env.INDEXER_QUEUE_URL!;
 
