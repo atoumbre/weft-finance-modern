@@ -158,7 +158,8 @@ resource "aws_iam_role_policy" "gha_scoped" {
           "ec2:*",
           "ssm:*",
           "budgets:*",
-          "sts:GetCallerIdentity"
+          "sts:GetCallerIdentity",
+          "application-autoscaling:*",
         ]
         Resource = "*"
       }

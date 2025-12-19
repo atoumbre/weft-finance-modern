@@ -35,11 +35,11 @@ jobs:
             ecr:
               - 'terraform/ecr/**'
 
-  # --- Infrastructure Jobs (Independent) ---
+
 
   deploy-bootstrap:
-    # needs: filter
-    # if: needs.filter.outputs.bootstrap == 'true'
+    needs: filter
+    if: needs.filter.outputs.bootstrap == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,8 +70,8 @@ jobs:
         run: terraform apply -auto-approve
 
   deploy-ecr:
-    # needs: filter
-    # if: needs.filter.outputs.ecr == 'true'
+    needs: filter
+    if: needs.filter.outputs.ecr == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -101,11 +101,11 @@ jobs:
         working-directory: terraform/ecr
         run: terraform apply -auto-approve
 
-  # --- Application Container Jobs ---
+
 
   build-indexer:
-    # needs: filter
-    # if: needs.filter.outputs.indexer == 'true'
+    needs: filter
+    if: needs.filter.outputs.indexer == 'true'
     runs-on: ubuntu-latest
     outputs:
       digest: ${{ steps.build.outputs.indexer_digest }}
@@ -131,8 +131,8 @@ jobs:
         run: ./scripts/build-push.sh indexer ${{ github.sha }}
 
   build-liquidator:
-    # needs: filter
-    # if: needs.filter.outputs.liquidator == 'true'
+    needs: filter
+    if: needs.filter.outputs.liquidator == 'true'
     runs-on: ubuntu-latest
     outputs:
       digest: ${{ steps.build.outputs.liquidator_digest }}
