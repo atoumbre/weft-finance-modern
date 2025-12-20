@@ -115,7 +115,7 @@ jobs:
         run: |
           terraform init -reconfigure \
             -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
-            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="dynamodb_table=weft-terraform-state-locks" \
             -backend-config="key=admin.tfstate" \
             -backend-config="region=us-east-1"
       - name: Terraform Apply
@@ -155,7 +155,7 @@ jobs:
         run: |
           terraform init -reconfigure \
             -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
-            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="dynamodb_table=weft-terraform-state-locks" \
             -backend-config="key=weft-${{ needs.set-env.outputs.name }}.tfstate" \
             -backend-config="region=us-east-1"
       - name: Terraform Apply
@@ -185,7 +185,7 @@ jobs:
         run: |
           terraform init -reconfigure \
             -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
-            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="dynamodb_table=weft-terraform-state-locks" \
             -backend-config="key=observability.tfstate" \
             -backend-config="region=us-east-1"
       - name: Terraform Apply

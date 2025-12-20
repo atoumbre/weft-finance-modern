@@ -13,8 +13,6 @@ function requireEnv(name: string): string {
     return value;
 }
 
-//
-
 export function checkRisk(cdp: { liquidationLtv: Decimal }): boolean {
     return cdp.liquidationLtv.gte(1);
 }
