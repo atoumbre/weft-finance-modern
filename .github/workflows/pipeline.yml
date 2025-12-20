@@ -218,7 +218,7 @@ jobs:
 
   deploy-indexer:
     needs: [build-indexer, deploy-backend, set-env]
-    if: needs.build-indexer.result == 'success' && (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
+    if: needs.build-indexer.result == 'success'
     uses: ./.github/workflows/_deploy-service.yml
     secrets: inherit
     with:
@@ -227,7 +227,7 @@ jobs:
 
   deploy-liquidator:
     needs: [build-liquidator, deploy-backend, set-env]
-    if: needs.build-liquidator.result == 'success' && (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
+    if: needs.build-liquidator.result == 'success'
     uses: ./.github/workflows/_deploy-service.yml
     secrets: inherit
     with:
@@ -236,7 +236,7 @@ jobs:
 
   deploy-dispatcher:
     needs: [filter, deploy-backend, set-env]
-    if: needs.filter.outputs.dispatcher == 'true' && (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
+    if: needs.filter.outputs.dispatcher == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
