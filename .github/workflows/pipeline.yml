@@ -1,0 +1,267 @@
+name: Weft Pipeline
+
+on:
+  workflow_run:
+    workflows: ["Tests"]
+    types: [completed]
+    branches: [main, stage]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment (mainnet or stokenet)."
+        required: false
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  precheck:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push'  && (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'skipped')) }}
+    steps:
+      - run: echo "Precheck passed."
+
+  set-env:
+    runs-on: ubuntu-latest
+    needs: [precheck]
+    outputs:
+      name: ${{ steps.env.outputs.name }}
+    steps:
+      - name: Select Environment
+        id: env
+        run: |
+          if [ -n "${{ github.event.inputs.environment }}" ]; then
+            env_name="${{ github.event.inputs.environment }}"
+          else
+            if [ "${{ github.event_name }}" = "workflow_run" ]; then
+              branch_name="${{ github.event.workflow_run.head_branch }}"
+            else
+              branch_name="${{ github.ref_name }}"
+            fi
+
+            case "$branch_name" in
+              main) env_name="mainnet" ;;
+              stage) env_name="stokenet" ;;
+              *) echo "Unsupported branch: ${branch_name}" >&2; exit 1 ;;
+            esac
+          fi
+          echo "name=${env_name}" >> "$GITHUB_OUTPUT"
+
+  filter:
+    runs-on: ubuntu-latest
+    needs: [precheck]
+    outputs:
+      admin: ${{ steps.filter.outputs.admin }}
+      backend: ${{ steps.filter.outputs.backend }}
+      dispatcher: ${{ steps.filter.outputs.dispatcher }}
+      indexer: ${{ steps.filter.outputs.indexer }}
+      liquidator: ${{ steps.filter.outputs.liquidator }}
+      observability: ${{ steps.filter.outputs.observability }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Resolve diff refs
+        id: refs
+        run: |
+          head_sha="$(git rev-parse HEAD)"
+          base_sha="$(git rev-parse HEAD^ 2>/dev/null || git rev-parse HEAD)"
+          echo "head=${head_sha}" >> "$GITHUB_OUTPUT"
+          echo "base=${base_sha}" >> "$GITHUB_OUTPUT"
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ steps.refs.outputs.base }}
+          ref: ${{ steps.refs.outputs.head }}
+          filters: |
+            admin:
+              - "terraform/admin/**"
+            backend:
+              - "terraform/backend/**"
+            observability:
+              - "terraform/observability/**"
+            dispatcher:
+              - "functions/dispatcher/**"
+            indexer:
+              - "containers/indexer/**"
+            liquidator:
+              - "containers/liquidator/**"
+  deploy-admin:
+    needs: [filter, set-env]
+    if: needs.filter.outputs.admin == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.0"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+      - name: Terraform Init
+        working-directory: terraform/admin
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
+            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="key=admin.tfstate" \
+            -backend-config="region=us-east-1"
+      - name: Terraform Apply
+        working-directory: terraform/admin
+        run: terraform apply -auto-approve
+
+  deploy-backend:
+    needs: [filter, set-env]
+    if: needs.filter.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.13"
+      - name: Install PNPM
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.0"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+      - name: Terraform Init
+        working-directory: terraform/backend
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
+            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="key=weft-${{ needs.set-env.outputs.name }}.tfstate" \
+            -backend-config="region=us-east-1"
+      - name: Terraform Apply
+        working-directory: terraform/backend
+        run: terraform apply -var-file="${{ needs.set-env.outputs.name }}.tfvars" -auto-approve
+
+  deploy-observability:
+    needs: [filter, set-env]
+    if: needs.filter.outputs.observability == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.0"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+      - name: Terraform Init
+        working-directory: terraform/observability
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
+            -backend-config="dynamodb_table=weft-terraform-locks" \
+            -backend-config="key=observability.tfstate" \
+            -backend-config="region=us-east-1"
+      - name: Terraform Apply
+        working-directory: terraform/observability
+        run: terraform apply -var-file="variables.tfvars" -auto-approve
+
+  build-indexer:
+    needs: [filter]
+    if: needs.filter.outputs.indexer == 'true'
+    uses: ./.github/workflows/_build-and-push-containers.yml
+    with:
+      service_name: indexer
+      service_path: containers/indexer
+      working_directory: containers/indexer
+      image_tag: ${{ github.sha }}
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+  build-liquidator:
+    needs: [filter]
+    if: needs.filter.outputs.liquidator == 'true'
+    uses: ./.github/workflows/_build-and-push-containers.yml
+    with:
+      service_name: liquidator
+      service_path: containers/liquidator
+      working_directory: containers/liquidator
+      image_tag: ${{ github.sha }}
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+  deploy-indexer:
+    needs: [build-indexer, deploy-backend, set-env]
+    if: needs.build-indexer.result == 'success' && (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
+    uses: ./.github/workflows/_deploy-service.yml
+    secrets: inherit
+    with:
+      service_name: indexer
+      environment: ${{ needs.set-env.outputs.name }}
+
+  deploy-liquidator:
+    needs: [build-liquidator, deploy-backend, set-env]
+    if: needs.build-liquidator.result == 'success' && (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
+    uses: ./.github/workflows/_deploy-service.yml
+    secrets: inherit
+    with:
+      service_name: liquidator
+      environment: ${{ needs.set-env.outputs.name }}
+
+  deploy-dispatcher:
+    needs: [filter, deploy-backend, set-env]
+    if: needs.filter.outputs.dispatcher == 'true' && (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.13"
+      - name: Enable Corepack
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: functions/dispatcher
+      - name: Bundle
+        run: pnpm run bundle
+        working-directory: functions/dispatcher
+      - name: Package Lambda
+        run: zip -r ../dispatcher.zip dist
+        working-directory: functions/dispatcher
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: us-east-1
+      - name: Update Lambda Function
+        run: |
+          aws lambda update-function-code \
+            --function-name "weft-${{ needs.set-env.outputs.name }}-dispatcher" \
+            --zip-file "fileb://dispatcher.zip"
