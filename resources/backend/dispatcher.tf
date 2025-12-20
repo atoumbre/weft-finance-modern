@@ -8,6 +8,8 @@ data "archive_file" "dispatcher_zip" {
   }
 }
 
+// 
+
 resource "aws_iam_role" "dispatcher_lambda_role" {
   name = "weft-${var.environment}-dispatcher-role"
   assume_role_policy = jsonencode({
