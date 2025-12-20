@@ -38,6 +38,7 @@
     "fargate",
     "github",
     "grafanalabs",
+    "hashicorp",
     "hostnames",
     "jsonencode",
     "logfilter",
@@ -51,7 +52,7 @@
     "stokenet",
     "tfstate",
     "tfvars",
-    "zipfile",
-    "toset"
+    "toset",
+    "zipfile"
   ]
 }
