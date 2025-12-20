@@ -26,6 +26,7 @@ jobs:
 
   filter:
     runs-on: ubuntu-latest
+    needs: [typo-check]
     outputs:
       dispatcher: ${{ steps.filter.outputs.dispatcher }}
       indexer: ${{ steps.filter.outputs.indexer }}
