@@ -14,6 +14,7 @@ terraform {
   backend "s3" {}
 }
 
+
 data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
