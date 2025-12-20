@@ -236,7 +236,7 @@ jobs:
 
   deploy-dispatcher:
     needs: [filter, deploy-backend, set-env]
-    if: ${{ always() && needs.filter.outputs.indexer == 'true'}}
+    if: ${{ always() && needs.filter.outputs.dispatcher == 'true'}}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
