@@ -26,9 +26,9 @@ sqs_max_receive_count  = 3
 
 # ECS Configs
 
-ecs_indexer_cpu       = "128"
+ecs_indexer_cpu       = "256"
 ecs_indexer_memory    = "128"
-ecs_liquidator_cpu    = "128"
+ecs_liquidator_cpu    = "256"
 ecs_liquidator_memory = "128"
 
 # Indexer Auto Scaling
