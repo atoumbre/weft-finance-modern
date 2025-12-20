@@ -1,11 +1,11 @@
+aws_region                              = "us-east-1"
+ssm_parameter_name_grafana_metric_token = "/weft/oservability/grafana_metric_token" # cloud_provider_token, metrics_write_token
+cloud_provider_url                      = "https://cloud-provider-api-prod-us-east-3.grafana.net"
+
 // Metrics
 
-ssm_parameter_name_grafana_metric_token = "/weft/oservability/grafana_metric_token" # cloud_provider_token, metrics_write_token
-
-aws_region               = "us-east-1"
-grafana_cloud_stack_slug = "atoumbre"
-cloud_provider_url       = "https://cloud-provider-api-prod-us-east-3.grafana.net"
-include_namespaces       = ["AWS/ECS"]
+# grafana_cloud_stack_slug = "atoumbre"
+# include_namespaces = ["AWS/ECS"]
 
 // Logs
 
