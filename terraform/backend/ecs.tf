@@ -1,6 +1,14 @@
+data "aws_ecr_repository" "indexer" {
+  name = "weft-indexer"
+}
+
+data "aws_ecr_repository" "liquidator" {
+  name = "weft-liquidator"
+}
+
 locals {
-  indexer_image_full    = var.indexer_image_digest != "" ? "${aws_ecr_repository.indexer.repository_url}@${var.indexer_image_digest}" : aws_ecr_repository.indexer.repository_url
-  liquidator_image_full = var.liquidator_image_digest != "" ? "${aws_ecr_repository.liquidator.repository_url}@${var.liquidator_image_digest}" : aws_ecr_repository.liquidator.repository_url
+  indexer_image_full    = var.indexer_image_digest != "" ? "${data.aws_ecr_repository.indexer.repository_url}@${var.indexer_image_digest}" : data.aws_ecr_repository.indexer.repository_url
+  liquidator_image_full = var.liquidator_image_digest != "" ? "${data.aws_ecr_repository.liquidator.repository_url}@${var.liquidator_image_digest}" : data.aws_ecr_repository.liquidator.repository_url
 }
 
 resource "aws_ecs_cluster" "main" {

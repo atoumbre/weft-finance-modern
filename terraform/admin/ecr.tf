@@ -5,4 +5,3 @@ resource "aws_ecr_repository" "indexer" {
 resource "aws_ecr_repository" "liquidator" {
   name = "weft-liquidator"
 }
-
