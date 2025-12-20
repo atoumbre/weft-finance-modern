@@ -114,7 +114,7 @@ export function createDispatcherHandler(params: {
                 runId: context.runId,
                 batchIndex: context.batchIndex,
                 batchCount: context.batchCount,
-                retryableCount: reTriable.length
+                reTriableCount: reTriable.length
             });
             return;
         }
