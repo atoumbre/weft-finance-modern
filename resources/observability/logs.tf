@@ -61,7 +61,7 @@ resource "aws_lambda_function" "lambda_promtail" {
     variables = {
       WRITE_ADDRESS = var.write_address
       USERNAME      = var.username
-      PASSWORD      = data.aws_ssm_parameter.grafana_metric_token.value
+      PASSWORD      = data.aws_ssm_parameter.grafana_log_token.value
       KEEP_STREAM   = var.keep_stream
       BATCH_SIZE    = var.batch_size
       EXTRA_LABELS  = var.extra_labels
