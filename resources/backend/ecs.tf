@@ -166,6 +166,8 @@ resource "aws_ecs_task_definition" "indexer" {
   }])
 }
 
+
+
 resource "aws_ecs_service" "indexer" {
   name            = "indexer"
   cluster         = aws_ecs_cluster.main.id
