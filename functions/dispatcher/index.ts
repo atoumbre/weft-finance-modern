@@ -1,3 +1,4 @@
+//
 
 import { SQSClient, SendMessageBatchCommand } from "@aws-sdk/client-sqs";
 import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";

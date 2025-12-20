@@ -9,7 +9,7 @@ const gatewayApi = GatewayApiClient.initialize({
     applicationName: "Weft Liquidator"
 });
 
-
+//
 
 const QUEUE_URL = process.env.LIQUIDATION_QUEUE_URL!;
 

@@ -63,8 +63,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
       - name: Resolve diff refs
-        id: refs
         run: |
           head_sha="$(git rev-parse HEAD)"
           if git rev-parse HEAD^ >/dev/null 2>&1; then
@@ -72,19 +72,13 @@ jobs:
           else
             base_sha="${head_sha}"
           fi
-          {
-            echo "head<<EOF"
-            echo "${head_sha}"
-            echo "EOF"
-            echo "base<<EOF"
-            echo "${base_sha}"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          printf 'HEAD_SHA=%s\n' "${head_sha}" >> "$GITHUB_ENV"
+          printf 'BASE_SHA=%s\n' "${base_sha}" >> "$GITHUB_ENV"
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          base: ${{ steps.refs.outputs.base }}
-          ref: ${{ steps.refs.outputs.head }}
+          base: ${{ env.BASE_SHA }}
+          ref: ${{ env.HEAD_SHA }}
           filters: |
             admin:
               - "terraform/admin/**"
