@@ -13,8 +13,42 @@ const gatewayApi = GatewayApiClient.initialize({
 
 const QUEUE_URL = process.env.LIQUIDATION_QUEUE_URL!;
 
-async function liquidateCdp(cdpId: string) {
-    console.log(`Attempting to liquidate CDP: ${cdpId} `);
+type LogLevel = "info" | "error";
+
+function toErrorFields(error: unknown) {
+    if (error instanceof Error) {
+        return {
+            errorName: error.name,
+            errorMessage: error.message,
+            errorStack: error.stack
+        };
+    }
+
+    return { errorMessage: String(error) };
+}
+
+function logEvent(level: LogLevel, event: string, fields: Record<string, unknown>) {
+    const payload = {
+        level,
+        service: "liquidator",
+        event,
+        timestamp: new Date().toISOString(),
+        ...fields
+    };
+
+    const line = JSON.stringify(payload);
+    if (level === "error") {
+        console.error(line);
+        return;
+    }
+    console.log(line);
+}
+
+async function liquidateCdp(cdpId: string, context: { runId?: string; messageId?: string }) {
+    logEvent("info", "liquidator.cdp.start", {
+        ...context,
+        cdpId
+    });
 
     const manifest = `
         CALL_METHOD Address("${LENDING_MARKET_COMPONENT}") "liquidate" NonFungibleLocalId("${cdpId}");
@@ -28,8 +62,15 @@ async function liquidateCdp(cdpId: string) {
     // Here we just preview it to verify it *would* work or just log it.
     // For the sake of the infrastructure demo, we'll assume success.
 
-    console.log("Transaction Manifest prepared:", manifest);
-    console.log("Liquidation transaction submitted (MOCKED).");
+    logEvent("info", "liquidator.cdp.mock_prepared", {
+        ...context,
+        cdpId,
+        manifestLength: manifest.length
+    });
+    logEvent("info", "liquidator.cdp.mock_submitted", {
+        ...context,
+        cdpId
+    });
 
     return true;
 }
@@ -41,10 +82,17 @@ async function processMessage(message: any) {
     try {
         body = JSON.parse(message.Body);
     } catch (e) {
-        console.error("Invalid message body JSON; skipping message.", e);
+        logEvent("error", "liquidator.message.invalid_json", {
+            messageId: message?.MessageId,
+            bodyLength: typeof message.Body === "string" ? message.Body.length : undefined,
+            ...toErrorFields(e)
+        });
         return;
     }
 
+    const rawRunId = (body as { runId?: unknown }).runId;
+    const runId = typeof rawRunId === "string" ? rawRunId : undefined;
+    const messageId = typeof message?.MessageId === "string" ? message.MessageId : undefined;
     const rawIds = Array.isArray((body as { cdpIds?: unknown }).cdpIds)
         ? (body as { cdpIds: unknown[] }).cdpIds
         : [(body as { cdpId?: unknown }).cdpId];
@@ -52,26 +100,47 @@ async function processMessage(message: any) {
 
     if (ids.length === 0) return;
     if (ids.length !== rawIds.length) {
-        console.error("Message contains invalid cdpIds entries; continuing with valid IDs only.");
+        logEvent("error", "liquidator.message.invalid_cdp_ids", {
+            messageId,
+            runId,
+            invalidCount: rawIds.length - ids.length
+        });
     }
+
+    logEvent("info", "liquidator.message.received", {
+        messageId,
+        runId,
+        cdpCount: ids.length
+    });
 
     const failures: string[] = [];
     for (const id of ids) {
         try {
-            await liquidateCdp(id);
+            await liquidateCdp(id, { runId, messageId });
         } catch (e) {
             failures.push(id);
-            console.error(`Failed to liquidate ${id} `, e);
+            logEvent("error", "liquidator.cdp.failed", {
+                messageId,
+                runId,
+                cdpId: id,
+                ...toErrorFields(e)
+            });
         }
     }
 
     if (failures.length > 0) {
         throw new Error(`Failed to liquidate ${failures.length} CDPs`);
     }
+
+    logEvent("info", "liquidator.message.completed", {
+        messageId,
+        runId,
+        cdpCount: ids.length
+    });
 }
 
 async function main() {
-    console.log("Liquidator Service Started");
+    logEvent("info", "liquidator.start", { queueUrl: QUEUE_URL });
 
     while (true) {
         try {
@@ -90,14 +159,19 @@ async function main() {
                             QueueUrl: QUEUE_URL,
                             ReceiptHandle: msg.ReceiptHandle
                         }));
-                        console.log(`Processed and deleted message: ${msg.MessageId}`);
+                        logEvent("info", "liquidator.message.deleted", {
+                            messageId: msg.MessageId
+                        });
                     } catch (e) {
-                        console.error(`Failed to process message ${msg.MessageId}. Letting it timeout back to queue. Error:`, e);
+                        logEvent("error", "liquidator.message.failed", {
+                            messageId: msg.MessageId,
+                            ...toErrorFields(e)
+                        });
                     }
                 }
             }
         } catch (error) {
-            console.error("Error in Liquidator loop:", error);
+            logEvent("error", "liquidator.loop.error", toErrorFields(error));
             await new Promise(resolve => setTimeout(resolve, 5000));
         }
     }

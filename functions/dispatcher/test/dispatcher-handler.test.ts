@@ -27,6 +27,7 @@ test("dispatches IDs in chunk-sized messages", async () => {
     indexerQueueUrl: "https://example.com/indexer-queue",
     indexerBatchSize: 10,
     logger: { log: () => { }, error: () => { } },
+    runIdFactory: () => "run-123",
   });
 
   const result = await handler();
@@ -38,10 +39,11 @@ test("dispatches IDs in chunk-sized messages", async () => {
   expect(cmd.input.QueueUrl).toBe("https://example.com/indexer-queue");
   expect(cmd.input.Entries.length).toBe(3);
 
-  const bodies = cmd.input.Entries.map((e: any) => JSON.parse(e.MessageBody).cdpIds);
-  expect(bodies[0]).toEqual(ids.slice(0, 10));
-  expect(bodies[1]).toEqual(ids.slice(10, 20));
-  expect(bodies[2]).toEqual(ids.slice(20, 25));
+  const bodies = cmd.input.Entries.map((e: any) => JSON.parse(e.MessageBody));
+  expect(bodies[0].cdpIds).toEqual(ids.slice(0, 10));
+  expect(bodies[1].cdpIds).toEqual(ids.slice(10, 20));
+  expect(bodies[2].cdpIds).toEqual(ids.slice(20, 25));
+  expect(bodies.every((body: any) => body.runId === "run-123")).toBe(true);
 
   expect(cmd.input.Entries.map((e: any) => e.Id)).toEqual(["0", "1", "2"]);
 });

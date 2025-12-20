@@ -8,10 +8,41 @@ import Decimal from "decimal.js";
 type Logger = Pick<Console, "log" | "error">;
 export type Fetcher = Pick<WeftLedgerSateFetcher, "getMultipleCdp">;
 
+type LogLevel = "info" | "error";
+
 function requireEnv(name: string): string {
     const value = process.env[name];
     if (!value) throw new Error(`Missing required env var: ${name}`);
     return value;
+}
+
+function toErrorFields(error: unknown) {
+    if (error instanceof Error) {
+        return {
+            errorName: error.name,
+            errorMessage: error.message,
+            errorStack: error.stack
+        };
+    }
+
+    return { errorMessage: String(error) };
+}
+
+function logEvent(logger: Logger, level: LogLevel, event: string, fields: Record<string, unknown>) {
+    const payload = {
+        level,
+        service: "indexer",
+        event,
+        timestamp: new Date().toISOString(),
+        ...fields
+    };
+
+    const line = JSON.stringify(payload);
+    if (level === "error") {
+        logger.error(line);
+        return;
+    }
+    logger.log(line);
 }
 
 export function checkRisk(cdp: { liquidationLtv: Decimal }): boolean {
@@ -34,42 +65,95 @@ export function createMessageProcessor(params: {
     if (!params.bucketName) throw new Error("Missing bucketName");
 
     return async function processMessage(message: any) {
-        if (!message?.Body) return;
+        if (!message?.Body) {
+            logEvent(logger, "error", "indexer.message.missing_body", {
+                messageId: message?.MessageId
+            });
+            return;
+        }
 
         let body: unknown;
         try {
             body = JSON.parse(message.Body);
         } catch (error) {
-            logger.error("Invalid message body JSON; skipping message.", error);
+            logEvent(logger, "error", "indexer.message.invalid_json", {
+                messageId: message?.MessageId,
+                bodyLength: typeof message.Body === "string" ? message.Body.length : undefined,
+                ...toErrorFields(error)
+            });
             return;
         }
 
         const rawIds = (body as { cdpIds?: unknown }).cdpIds;
+        const rawRunId = (body as { runId?: unknown }).runId;
+        const rawChunkIndex = (body as { chunkIndex?: unknown }).chunkIndex;
+        const rawChunkCount = (body as { chunkCount?: unknown }).chunkCount;
+        const runId = typeof rawRunId === "string" ? rawRunId : undefined;
+        const chunkIndex = typeof rawChunkIndex === "number" ? rawChunkIndex : undefined;
+        const chunkCount = typeof rawChunkCount === "number" ? rawChunkCount : undefined;
+        const messageId = typeof message?.MessageId === "string" ? message.MessageId : undefined;
+
         if (!Array.isArray(rawIds)) {
-            logger.error("Message missing cdpIds array; skipping message.");
+            logEvent(logger, "error", "indexer.message.missing_cdp_ids", {
+                messageId,
+                runId
+            });
             return;
         }
 
         const ids = rawIds.filter((id): id is string => typeof id === "string" && id.length > 0);
         if (ids.length === 0) return;
         if (ids.length !== rawIds.length) {
-            logger.error("Message contains invalid cdpIds entries; continuing with valid IDs only.");
+            logEvent(logger, "error", "indexer.message.invalid_cdp_ids", {
+                messageId,
+                runId,
+                invalidCount: rawIds.length - ids.length
+            });
         }
 
         try {
-            logger.log(`Fetching data for ${ids.length} CDPs via WeftLedgerSateFetcher...`);
+            logEvent(logger, "info", "indexer.message.received", {
+                messageId,
+                runId,
+                chunkIndex,
+                chunkCount,
+                cdpCount: ids.length
+            });
+
+            const fetchStart = Date.now();
+            logEvent(logger, "info", "indexer.fetch.start", {
+                messageId,
+                runId,
+                cdpCount: ids.length
+            });
 
             const result = await params.fetcher.getMultipleCdp(ids, {
                 cdpPerBatch: 50,
-                onProgress: (fetched: number) => logger.log(`Fetched ${fetched}/${ids.length}`)
+                onProgress: (fetched: number) => logEvent(logger, "info", "indexer.fetch.progress", {
+                    messageId,
+                    runId,
+                    fetched,
+                    total: ids.length
+                })
             });
 
             if (result.failedIds?.length) {
-                logger.error(`Failed to fetch ${result.failedIds.length} CDPs; retrying message.`, result.failedIds);
+                logEvent(logger, "error", "indexer.fetch.failed", {
+                    messageId,
+                    runId,
+                    failedCount: result.failedIds.length,
+                    failedIds: result.failedIds
+                });
                 throw new Error("Failed to fetch some CDPs");
             }
 
             const cdps = result.data;
+            logEvent(logger, "info", "indexer.fetch.complete", {
+                messageId,
+                runId,
+                fetchedCount: cdps.length,
+                durationMs: Date.now() - fetchStart
+            });
 
             const timestamp = now().getTime();
             const date = new Date(timestamp);
@@ -78,31 +162,52 @@ export function createMessageProcessor(params: {
             const day = String(date.getUTCDate()).padStart(2, "0");
 
             const key = `cdp-data/${year}/${month}/${day}/cdp-batch-${timestamp}.json`;
+            const bodyString = JSON.stringify(cdps);
 
             await params.s3.send(new PutObjectCommand({
                 Bucket: params.bucketName,
                 Key: key,
-                Body: JSON.stringify(cdps),
+                Body: bodyString,
                 ContentType: "application/json"
             }));
-            logger.log(`Saved batch to S3: ${key}`);
+            logEvent(logger, "info", "indexer.s3.write", {
+                messageId,
+                runId,
+                key,
+                bytes: Buffer.byteLength(bodyString)
+            });
 
             const atRiskCdps = (cdps as any[]).filter(checkRisk);
 
             if (atRiskCdps.length > 0) {
-                logger.log(`Found ${atRiskCdps.length} at-risk CDPs. Sending to Liquidation Queue.`);
+                logEvent(logger, "info", "indexer.at_risk.detected", {
+                    messageId,
+                    runId,
+                    atRiskCount: atRiskCdps.length
+                });
 
                 await params.sqs.send(new SendMessageCommand({
                     QueueUrl: params.liquidationQueueUrl,
                     MessageBody: JSON.stringify({
                         cdpIds: atRiskCdps.map((c: any) => c.id),
-                        reason: "High LTV"
+                        reason: "High LTV",
+                        runId
                     })
                 }));
+
+                logEvent(logger, "info", "indexer.liquidation.enqueued", {
+                    messageId,
+                    runId,
+                    atRiskCount: atRiskCdps.length
+                });
             }
 
         } catch (e) {
-            logger.error("Error fetching/processing CDPs:", e);
+            logEvent(logger, "error", "indexer.message.error", {
+                messageId,
+                runId,
+                ...toErrorFields(e)
+            });
             throw e;
         }
     };
@@ -146,19 +251,22 @@ export function createIndexerWorker(params: {
                         QueueUrl: params.queueUrl,
                         ReceiptHandle: msg.ReceiptHandle
                     }));
+                    logEvent(logger, "info", "indexer.message.deleted", {
+                        messageId: msg.MessageId
+                    });
                 }
             }
         }
     }
 
     async function runForever() {
-        logger.log("Indexer Service Started");
+        logEvent(logger, "info", "indexer.start", { queueUrl: params.queueUrl });
 
         while (true) {
             try {
                 await runOnce();
             } catch (error) {
-                logger.error("Error in Indexer loop:", error);
+                logEvent(logger, "error", "indexer.loop.error", toErrorFields(error));
                 await new Promise(resolve => setTimeout(resolve, 5000));
             }
         }
