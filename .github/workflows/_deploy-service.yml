@@ -1,0 +1,58 @@
+name: Deploy Service
+
+on:
+  workflow_call:
+    secrets:
+      AWS_ACCOUNT_ID:
+        required: true
+    inputs:
+      service_name:
+        description: "ECS service name to deploy."
+        required: true
+        type: string
+      environment:
+        description: "Target environment (mainnet or stokenet)."
+        required: false
+        type: string
+        default: ""
+      source_branch:
+        description: "Source branch for workflow_run mapping."
+        required: false
+        type: string
+        default: ""
+      aws_region:
+        description: "AWS region for ECS."
+        required: false
+        type: string
+        default: "us-east-1"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: ${{ inputs.aws_region }}
+      - name: Select Cluster
+        id: cluster
+        run: |
+          if [ -n "${{ inputs.environment }}" ]; then
+            env_name="${{ inputs.environment }}"
+          else
+            branch="${{ inputs.source_branch }}"
+            case "$branch" in
+              main) env_name="mainnet" ;;
+              stage) env_name="stokenet" ;;
+              "") echo "Missing source branch for environment selection." >&2; exit 1 ;;
+              *) echo "Unsupported branch: $branch" >&2; exit 1 ;;
+            esac
+          fi
+          echo "name=weft-${env_name}-cluster" >> "$GITHUB_OUTPUT"
+      - name: Update ECS Service
+        run: aws ecs update-service --cluster "${{ steps.cluster.outputs.name }}" --service "${{ inputs.service_name }}" --force-new-deployment

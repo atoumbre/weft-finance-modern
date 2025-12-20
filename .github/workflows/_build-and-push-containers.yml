@@ -1,0 +1,101 @@
+name: Build Service
+
+on:
+  workflow_call:
+    secrets:
+      AWS_ACCOUNT_ID:
+        required: true
+    inputs:
+      service_name:
+        description: "Service name used for ECR and ECS."
+        required: true
+        type: string
+      service_path:
+        description: "Build context path relative to repo root."
+        required: false
+        type: string
+        default: "."
+      working_directory:
+        description: "Working directory for prepare/test steps."
+        required: false
+        type: string
+        default: "."
+      image_tag:
+        description: "Image tag to push (latest is always pushed)."
+        required: false
+        type: string
+        default: "latest"
+      aws_region:
+        description: "AWS region for ECR/ECS."
+        required: false
+        type: string
+        default: "us-east-1"
+      prepare_test:
+        description: "Optional command to prepare tests."
+        required: false
+        type: string
+      test:
+        description: "Optional test command."
+        required: false
+        type: string
+      prepare_build:
+        description: "Optional command to run before container build."
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.13"
+      - name: Enable Corepack
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: ${{ inputs.aws_region }}
+      - name: Prepare
+        if: ${{ inputs.prepare_test != '' }}
+        run: ${{ inputs.prepare_test }}
+        working-directory: ${{ inputs.working_directory }}
+      - name: Test
+        if: ${{ inputs.test != '' }}
+        run: ${{ inputs.test }}
+        working-directory: ${{ inputs.working_directory }}
+      - name: Pre-build
+        if: ${{ inputs.prepare_build != '' }}
+        run: ${{ inputs.prepare_build }}
+        working-directory: ${{ inputs.working_directory }}
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_OUTPUT
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region "${{ inputs.aws_region }}" \
+            | docker login --username AWS --password-stdin "${{ steps.account.outputs.id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com"
+      - name: Build and Push
+        run: |
+          IMAGE="${{ steps.account.outputs.id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/weft-${{ inputs.service_name }}"
+          docker buildx build \
+            --platform linux/arm64 \
+            --pull \
+            -t "${IMAGE}:${{ inputs.image_tag }}" \
+            -t "${IMAGE}:latest" \
+            --push "${{ inputs.service_path }}"
