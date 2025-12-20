@@ -34,7 +34,6 @@ jobs:
     needs: [precheck]
     outputs:
       name: ${{ steps.env.outputs.name }}
-      aws_account_id: ${{ steps.account.outputs.id }}
     steps:
       - name: Select Environment
         id: env
@@ -55,16 +54,6 @@ jobs:
             esac
           fi
           echo "name=${env_name}" >> "$GITHUB_OUTPUT"
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Get AWS Account ID
-        id: account
-        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
 
   filter:
     runs-on: ubuntu-latest
@@ -100,11 +89,11 @@ jobs:
           ref: ${{ env.HEAD_SHA }}
           filters: |
             admin:
-              - "resources/admin/**"
+              - "terraform/admin/**"
             backend:
-              - "resources/backend/**"
+              - "terraform/backend/**"
             observability:
-              - "resources/observability/**"
+              - "terraform/observability/**"
             dispatcher:
               - "functions/dispatcher/**"
             indexer:
@@ -143,17 +132,21 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
       - name: Terraform Init
-        working-directory: resources/admin
+        working-directory: terraform/admin
         run: |
           terraform init -reconfigure \
-            -backend-config="bucket=weft-terraform-state-${{ needs.set-env.outputs.aws_account_id }}" \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
             -backend-config="dynamodb_table=weft-terraform-state-locks" \
             -backend-config="key=admin.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}"
 
       - name: Terraform Apply
-        working-directory: resources/admin
+        working-directory: terraform/admin
         run: terraform apply -auto-approve
 
   deploy-backend:
@@ -200,17 +193,21 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
       - name: Terraform Init
-        working-directory: resources/backend
+        working-directory: terraform/backend
         run: |
           terraform init -reconfigure \
-            -backend-config="bucket=weft-terraform-state-${{ needs.set-env.outputs.aws_account_id }}" \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
             -backend-config="dynamodb_table=weft-terraform-state-locks" \
             -backend-config="key=weft-${{ needs.set-env.outputs.name }}.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}"
 
       - name: Terraform Apply
-        working-directory: resources/backend
+        working-directory: terraform/backend
         run: terraform apply -var-file="${{ needs.set-env.outputs.name }}.tfvars" -auto-approve
 
   deploy-observability:
@@ -231,17 +228,21 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
       - name: Terraform Init
-        working-directory: resources/observability
+        working-directory: terraform/observability
         run: |
           terraform init -reconfigure \
-            -backend-config="bucket=weft-terraform-state-${{ needs.set-env.outputs.aws_account_id }}" \
+            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
             -backend-config="dynamodb_table=weft-terraform-state-locks" \
             -backend-config="key=observability.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}"
 
       - name: Terraform Apply
-        working-directory: resources/observability
+        working-directory: terraform/observability
         run: terraform apply -var-file="variables.tfvars" -auto-approve
 
   build-indexer:
