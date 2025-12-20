@@ -43,15 +43,15 @@ export function createDispatcherHandler(params: {
             logger.error(`SQS batch had ${senderFaults.length} sender faults.`, senderFaults);
         }
 
-        const retriable = failed.filter(item => !item.SenderFault);
-        if (retriable.length === 0) return;
+        const reTriable = failed.filter(item => !item.SenderFault);
+        if (reTriable.length === 0) return;
 
-        const retryEntries = retriable
+        const retryEntries = reTriable
             .map(item => entryById.get(item.Id!))
             .filter((entry): entry is { Id: string; MessageBody: string } => Boolean(entry));
 
         if (retryEntries.length === 0) {
-            logger.error("SQS batch retry skipped; retryable entries not found.");
+            logger.error("SQS batch retry skipped; re-triable entries not found.");
             return;
         }
 

@@ -24,10 +24,10 @@
 # }
 
 provider "aws" {
-  // FILLME: AWS region
+  // FILL ME: AWS region
   region = var.aws_region
 
-  // FILLME: local AWS profile to use
+  // FILL ME: local AWS profile to use
   # profile = "default"
 }
 
