@@ -94,7 +94,7 @@ jobs:
               - "containers/liquidator/**"
   deploy-admin:
     needs: [filter, set-env]
-    if: needs.filter.outputs.admin == 'true'
+    if: ${{ always() && needs.filter.outputs.admin == 'true'}}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -124,7 +124,7 @@ jobs:
 
   deploy-backend:
     needs: [filter, set-env]
-    if: needs.filter.outputs.backend == 'true'
+    if: ${{ always() && needs.filter.outputs.backend == 'true'}}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -164,7 +164,7 @@ jobs:
 
   deploy-observability:
     needs: [filter, set-env]
-    if: needs.filter.outputs.observability == 'true'
+    if: ${{ always() && needs.filter.outputs.observability == 'true'}}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -194,7 +194,7 @@ jobs:
 
   build-indexer:
     needs: [filter]
-    if: needs.filter.outputs.indexer == 'true'
+    if: ${{ always() && needs.filter.outputs.indexer == 'true'}}
     uses: ./.github/workflows/_build-and-push-containers.yml
     with:
       service_name: indexer
@@ -206,7 +206,7 @@ jobs:
 
   build-liquidator:
     needs: [filter]
-    if: needs.filter.outputs.liquidator == 'true'
+    if: ${{ always() && needs.filter.outputs.liquidator == 'true'}}
     uses: ./.github/workflows/_build-and-push-containers.yml
     with:
       service_name: liquidator
@@ -218,7 +218,7 @@ jobs:
 
   deploy-indexer:
     needs: [build-indexer, deploy-backend, set-env]
-    if: needs.build-indexer.result == 'success'
+    if: ${{needs.build-indexer.result == 'success'}}
     uses: ./.github/workflows/_deploy-service.yml
     secrets: inherit
     with:
@@ -227,7 +227,7 @@ jobs:
 
   deploy-liquidator:
     needs: [build-liquidator, deploy-backend, set-env]
-    if: needs.build-liquidator.result == 'success'
+    if: ${{ needs.build-liquidator.result == 'success' }}
     uses: ./.github/workflows/_deploy-service.yml
     secrets: inherit
     with:
@@ -236,7 +236,7 @@ jobs:
 
   deploy-dispatcher:
     needs: [filter, deploy-backend, set-env]
-    if: needs.filter.outputs.dispatcher == 'true'
+    if: ${{ always() && needs.filter.outputs.indexer == 'true'}}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
