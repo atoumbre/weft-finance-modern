@@ -16,7 +16,7 @@ username      = "1432998"
 s3_bucket     = "misc-admin-artefacts"
 s3_key        = "lambda-promtail.zip"
 keep_stream   = "false"
-extra_labels  = "weft"
+extra_labels  = "env,weft"
 batch_size    = "8192"
 
 log_group_names = [
