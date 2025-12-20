@@ -8,6 +8,8 @@ import { CollateralizeDebtPositionData } from "@weft-finance/ledger-state";
 
 const silentLogger = { log: () => undefined, error: () => undefined };
 
+
+
 test("checkRisk returns true when liquidationLtv >= 1", () => {
     expect(checkRisk({ liquidationLtv: new Decimal(1) })).toBe(true);
     expect(checkRisk({ liquidationLtv: new Decimal("1.0001") })).toBe(true);

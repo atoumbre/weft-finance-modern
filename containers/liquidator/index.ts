@@ -10,6 +10,7 @@ const gatewayApi = GatewayApiClient.initialize({
 });
 
 
+
 const QUEUE_URL = process.env.LIQUIDATION_QUEUE_URL!;
 
 async function liquidateCdp(cdpId: string) {
