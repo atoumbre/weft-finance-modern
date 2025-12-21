@@ -44,6 +44,8 @@ function logEvent(level: LogLevel, event: string, fields: Record<string, unknown
     console.log(line);
 }
 
+// rarr
+
 async function liquidateCdp(cdpId: string, context: { runId?: string; messageId?: string }) {
     logEvent("info", "liquidator.cdp.start", {
         ...context,
