@@ -2,7 +2,7 @@ name: Test Pipeline
 
 on:
   push:
-    branches: [main, stage, dev]
+    branches: [dev]
   pull_request:
     branches: [main, stage]
   workflow_dispatch:
