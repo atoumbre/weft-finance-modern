@@ -40,18 +40,11 @@ jobs:
       contents: read
       pull-requests: read
 
-  # Gate for all deployments
-  services-precheck:
-    runs-on: ubuntu-latest
-    needs: [tests-services, validate-resources]
-    if: ${{ always() && needs.tests-services.result == 'success' && (needs.validate-resources.result == 'success' || needs.validate-resources.result == 'skipped') }}
-    steps:
-      - run: echo "Precheck passed."
-
+  # Gate resource deployments
   resources-precheck:
     runs-on: ubuntu-latest
-    needs: [tests-services, validate-resources]
-    if: ${{ always() && needs.tests-services.result == 'success' && (needs.validate-resources.result == 'success' || needs.validate-resources.result == 'skipped') }}
+    needs: [validate-resources]
+    if: ${{ always() && (needs.validate-resources.result == 'success' || needs.validate-resources.result == 'skipped') }}
     steps:
       - run: echo "Precheck passed."
 
@@ -76,6 +69,14 @@ jobs:
             esac
           fi
           echo "name=${env_name}" >> "$GITHUB_OUTPUT"
+
+  # Gate service deployments
+  services-precheck:
+    runs-on: ubuntu-latest
+    needs: [tests-services]
+    if: ${{ always() && (needs.tests-services.result == 'success' || needs.tests-services.result == 'skipped') }}
+    steps:
+      - run: echo "Precheck passed."
 
   # Detect changes for conditional builds
   filter:
