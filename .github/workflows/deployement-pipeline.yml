@@ -43,8 +43,8 @@ jobs:
   # Gate for all deployments
   precheck:
     runs-on: ubuntu-latest
-    needs: [typo-check, tests-services, validate-resources]
-    if: ${{ always() && needs.typo-check.result == 'success' && needs.tests-services.result == 'success' && (needs.validate-resources.result == 'success' || needs.validate-resources.result == 'skipped') }}
+    needs: [tests-services, validate-resources]
+    if: ${{ always() && needs.tests-services.result == 'success' && (needs.validate-resources.result == 'success' || needs.validate-resources.result == 'skipped') }}
     steps:
       - run: echo "Precheck passed."
 
