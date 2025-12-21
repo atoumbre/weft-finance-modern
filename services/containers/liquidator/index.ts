@@ -4,6 +4,8 @@ import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 import { LENDING_MARKET_COMPONENT } from "@weft-finance/ledger-state";
 import pino from "pino";
 
+//
+
 const logger = pino({
     level: process.env.LOG_LEVEL ?? "info",
     base: { service: "liquidator" }

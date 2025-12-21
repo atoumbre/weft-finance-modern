@@ -5,6 +5,8 @@ import { WeftLedgerSateFetcher } from "@weft-finance/ledger-state";
 import Decimal from "decimal.js";
 import pino, { type Logger as PinoLogger } from "pino";
 
+//
+
 type Logger = Pick<PinoLogger, "info" | "error">;
 export type Fetcher = Pick<WeftLedgerSateFetcher, "getMultipleCdp">;
 

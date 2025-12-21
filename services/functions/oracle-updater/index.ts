@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
 import pino from "pino";
 
+//
+
 type LogLevel = "info" | "error";
 
 type AssetConfig = {
