@@ -4,7 +4,7 @@ import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 import { WeftLedgerSateFetcher } from "@weft-finance/ledger-state";
 import Decimal from "decimal.js";
 
-//
+// rarr
 
 type Logger = Pick<Console, "log" | "error">;
 export type Fetcher = Pick<WeftLedgerSateFetcher, "getMultipleCdp">;
@@ -128,14 +128,22 @@ export function createMessageProcessor(params: {
                 cdpCount: ids.length
             });
 
+            let totalFetched = 0
+
             const result = await params.fetcher.getMultipleCdp(ids, {
-                cdpPerBatch: 50,
-                onProgress: (fetched: number) => logEvent(logger, "info", "indexer.fetch.progress", {
-                    messageId,
-                    runId,
-                    fetched,
-                    total: ids.length
-                })
+                cdpPerBatch: 10,
+                onProgress: (fetched: number) => {
+
+                    totalFetched += fetched
+
+                    logEvent(logger, "info", "indexer.fetch.progress", {
+                        messageId,
+                        runId,
+                        fetchedCount: fetched,
+                        totalFetched,
+                        total: ids.length
+                    })
+                }
             });
 
             if (result.failedIds?.length) {
