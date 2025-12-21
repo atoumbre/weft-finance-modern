@@ -113,6 +113,10 @@ function optionalEnv(name: string): string | undefined {
     return value && value.trim().length > 0 ? value : undefined;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+}
+
 function toErrorFields(error: unknown) {
     if (error instanceof Error) {
         return {
@@ -143,7 +147,7 @@ function logEvent(level: LogLevel, event: string, fields: Record<string, unknown
     logger.info(payload, event);
 }
 
-async function fetchJson(url: string, timeoutMs: number) {
+async function fetchJson(url: string, timeoutMs: number): Promise<unknown> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -255,24 +259,31 @@ async function fetchPythBatch(ids: string[], options: FetchOptions, runId: strin
 
     try {
         const payload = await fetchJson(url.toString(), options.timeoutMs);
-        const parsed = Array.isArray(payload?.parsed)
-            ? payload.parsed
-            : Array.isArray(payload)
-                ? payload
-                : Array.isArray(payload?.priceFeeds)
+        const parsed = Array.isArray(payload)
+            ? payload
+            : isRecord(payload) && Array.isArray(payload.parsed)
+                ? payload.parsed
+                : isRecord(payload) && Array.isArray(payload.priceFeeds)
                     ? payload.priceFeeds
                     : [];
 
         for (const feed of parsed) {
-            const feedId = typeof feed?.id === "string" ? normalizeHexId(feed.id) : undefined;
-            const price = feed?.price;
-            if (!feedId || !price || price.price === undefined || price.expo === undefined) {
+            if (!isRecord(feed)) continue;
+            const feedId = typeof feed.id === "string" ? normalizeHexId(feed.id) : undefined;
+            const price = isRecord(feed.price) ? feed.price : undefined;
+            const priceValue = price?.price;
+            const priceExpo = price?.expo;
+            if (
+                !feedId ||
+                (typeof priceValue !== "number" && typeof priceValue !== "string") ||
+                typeof priceExpo !== "number"
+            ) {
                 continue;
             }
 
-            const publishTime = typeof price.publish_time === "number" ? price.publish_time : undefined;
-            const priceValue = formatPythPrice(String(price.price), price.expo);
-            map.set(feedId, { price: priceValue, publishTime });
+            const publishTime = typeof price?.publish_time === "number" ? price.publish_time : undefined;
+            const formattedPrice = formatPythPrice(String(priceValue), priceExpo);
+            map.set(feedId, { price: formattedPrice, publishTime });
         }
 
         logEvent("info", "oracle.price.pyth.batch", {
@@ -356,10 +367,13 @@ async function fetchCoinGeckoBatch(ids: string[], options: FetchOptions, runId: 
 
     try {
         const payload = await fetchJson(url.toString(), options.timeoutMs);
+        const payloadRecord = isRecord(payload) ? payload : {};
         for (const id of uniqueIds) {
-            const usd = payload?.[id]?.usd;
+            const entry = payloadRecord[id];
+            const usd = isRecord(entry) ? entry.usd : undefined;
             if (usd === undefined || usd === null) continue;
-            map.set(id, { price: typeof usd === "number" ? usd.toString() : String(usd) });
+            if (typeof usd !== "number" && typeof usd !== "string") continue;
+            map.set(id, { price: typeof usd === "number" ? usd.toString() : usd });
         }
 
         logEvent("info", "oracle.price.coingecko.batch", {

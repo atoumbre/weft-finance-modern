@@ -42,7 +42,7 @@ resource "aws_iam_role_policy" "lambda_promtail_policy_logs" {
 
 resource "aws_cloudwatch_log_group" "lambda_promtail_log_group" {
   name              = "/aws/lambda/GrafanaCloudLambdaPromtail"
-  retention_in_days = 14
+  retention_in_days = 7
 }
 
 resource "aws_lambda_function" "lambda_promtail" {
