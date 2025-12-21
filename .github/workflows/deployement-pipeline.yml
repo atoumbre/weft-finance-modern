@@ -1,8 +1,8 @@
-name: Weft Pipeline
+name: Deployment Pipeline
 
 on:
   workflow_run:
-    workflows: ["Services Testing", "Resources Checking"]
+    workflows: ["Test Pipeline"]
     types: [completed]
     branches: [main, stage]
   workflow_dispatch:

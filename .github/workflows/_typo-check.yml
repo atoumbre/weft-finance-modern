@@ -1,11 +1,7 @@
 name: Typo Checking
 
 on:
-  push:
-    branches: [main, stage, dev]
-  pull_request:
-    branches: [main, stage]
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read

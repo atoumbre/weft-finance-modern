@@ -1,15 +1,7 @@
 name: Resources Checking
 
 on:
-  push:
-    branches: [main, stage, dev]
-    paths:
-      - "resources/**"
-  pull_request:
-    branches: [main, stage]
-    paths:
-      - "resources/**"
-  workflow_dispatch:
+  workflow_call:
 
 jobs:
   validate:
