@@ -1,6 +1,8 @@
+/* cSpell:disable */
+
 /// <reference types="bun-types" />
 import { expect, test, beforeEach, afterEach } from "bun:test";
-import { handler } from "../index";
+import { handler } from "../src/index";
 
 const originalEnv = { ...process.env };
 
@@ -15,8 +17,8 @@ beforeEach(() => {
     setEnv("ORACLE_COMPONENT_ADDRESS", "component_rdx_oracle_test");
     setEnv("BADGE_NFT_ID", "#1#");
     setEnv("PYTH_HERMES_URL", "https://hermes.pyth.network");
-    setEnv("PYTH_PRICE_ID_XRD_USD", "0x816c6604beb161d3ad9c3b584f06c682e6299516165d756a68c7660b073b7072");
 
+    setEnv("PYTH_PRICE_ID_XRD_USD", "0x816c6604beb161d3ad9c3b584f06c682e6299516165d756a68c7660b073b7072");
     setEnv("PYTH_PRICE_ID_XUSDT", "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b");
     setEnv("PYTH_PRICE_ID_HUSDT", "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b");
     setEnv("PYTH_PRICE_ID_XUSDC", "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a");
