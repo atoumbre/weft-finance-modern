@@ -69,24 +69,79 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0 # Fetch full history to find previous workflow runs
 
-      - name: Resolve diff refs
+      - name: Find last successful workflow run
+        id: last-success
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          head_sha="$(git rev-parse HEAD)"
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            base_sha="$(git rev-parse HEAD^)"
+          echo "=== Finding last successful workflow run ==="
+
+          # Get current branch
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            branch_name="${{ github.event.workflow_run.head_branch }}"
           else
-            base_sha="${head_sha}"
+            branch_name="${{ github.ref_name }}"
           fi
-          printf 'HEAD_SHA=%s\n' "${head_sha}" >> "$GITHUB_ENV"
-          printf 'BASE_SHA=%s\n' "${base_sha}" >> "$GITHUB_ENV"
+          echo "Current branch: ${branch_name}"
+
+          # Get current HEAD SHA
+          head_sha="$(git rev-parse HEAD)"
+          echo "Current HEAD SHA: ${head_sha}"
+
+          # Find the last successful run of this workflow on the same branch
+          echo "Searching for last successful 'Weft Pipeline' workflow run on branch '${branch_name}'..."
+          echo "Checking last 50 workflow runs..."
+
+          last_success=$(gh run list \
+            --workflow="Weft Pipeline" \
+            --branch="${branch_name}" \
+            --status=success \
+            --limit=50 \
+            --json headSha,conclusion,status,createdAt,databaseId \
+            --jq '[.[] | select(.conclusion == "success" and .headSha != "'"${head_sha}"'")][0].headSha' || echo "")
+
+          if [ -z "$last_success" ] || [ "$last_success" = "null" ]; then
+            echo "⚠️  No previous successful run found in last 50 runs"
+            echo "Falling back to HEAD^ for comparison"
+            if git rev-parse HEAD^ >/dev/null 2>&1; then
+              base_sha="$(git rev-parse HEAD^)"
+              echo "Using HEAD^ as base: ${base_sha}"
+            else
+              base_sha="$(git rev-parse HEAD)"
+              echo "⚠️  No parent commit found, using HEAD as base: ${base_sha}"
+            fi
+          else
+            echo "✅ Found last successful run at commit: ${last_success}"
+            base_sha="$last_success"
+            
+            # Calculate number of commits between base and head
+            commit_count=$(git rev-list --count ${base_sha}..${head_sha} 2>/dev/null || echo "unknown")
+            echo "📊 Commits since last successful run: ${commit_count}"
+            
+            # Show the commits being compared
+            echo ""
+            echo "=== Commits included in this diff ==="
+            git log --oneline ${base_sha}..${head_sha} || echo "Could not display commit log"
+          fi
+
+          echo ""
+          echo "=== Comparison Summary ==="
+          echo "Base SHA:  ${base_sha}"
+          echo "Head SHA:  ${head_sha}"
+          echo "Comparing: ${base_sha}...${head_sha}"
+          echo ""
+
+          # Output for GitHub Actions
+          echo "base_sha=${base_sha}" >> "$GITHUB_OUTPUT"
+          echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
 
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          base: ${{ env.BASE_SHA }}
-          ref: ${{ env.HEAD_SHA }}
+          base: ${{ steps.last-success.outputs.base_sha }}
+          ref: ${{ steps.last-success.outputs.head_sha }}
           filters: |
             admin:
               - "resources/admin/**"
