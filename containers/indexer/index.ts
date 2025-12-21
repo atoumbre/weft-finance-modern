@@ -4,8 +4,6 @@ import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 import { WeftLedgerSateFetcher } from "@weft-finance/ledger-state";
 import Decimal from "decimal.js";
 
-
-
 type Logger = Pick<Console, "log" | "error">;
 export type Fetcher = Pick<WeftLedgerSateFetcher, "getMultipleCdp">;
 
