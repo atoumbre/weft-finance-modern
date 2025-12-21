@@ -150,11 +150,11 @@ jobs:
             observability:
               - "resources/observability/**"
             dispatcher:
-              - "functions/dispatcher/**"
+              - "services/functions/dispatcher/**"
             indexer:
-              - "containers/indexer/**"
+              - "services/containers/indexer/**"
             liquidator:
-              - "containers/liquidator/**"
+              - "services/containers/liquidator/**"
 
   setup-terraform:
     runs-on: ubuntu-latest
@@ -306,8 +306,8 @@ jobs:
     uses: ./.github/workflows/_build-and-push-containers.yml
     with:
       service_name: indexer
-      service_path: containers/indexer
-      working_directory: containers/indexer
+      service_path: services/containers/indexer
+      working_directory: services/containers/indexer
       image_tag: ${{ github.sha }}
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -318,8 +318,8 @@ jobs:
     uses: ./.github/workflows/_build-and-push-containers.yml
     with:
       service_name: liquidator
-      service_path: containers/liquidator
-      working_directory: containers/liquidator
+      service_path: services/containers/liquidator
+      working_directory: services/containers/liquidator
       image_tag: ${{ github.sha }}
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -377,15 +377,15 @@ jobs:
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: functions/dispatcher
+        working-directory: services/functions/dispatcher
 
       - name: Bundle
         run: pnpm run bundle
-        working-directory: functions/dispatcher
+        working-directory: services/functions/dispatcher
 
       - name: Package Lambda
         run: zip -r dispatcher.zip dist
-        working-directory: functions/dispatcher
+        working-directory: services/functions/dispatcher
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -397,4 +397,4 @@ jobs:
         run: |
           aws lambda update-function-code \
             --function-name "weft-${{ needs.set-env.outputs.name }}-dispatcher" \
-            --zip-file "fileb://functions/dispatcher/dispatcher.zip"
+            --zip-file "fileb://services/functions/dispatcher/dispatcher.zip"

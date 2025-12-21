@@ -2,6 +2,12 @@
 import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } from "@aws-sdk/client-sqs";
 import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 import { LENDING_MARKET_COMPONENT } from "@weft-finance/ledger-state";
+import pino from "pino";
+
+const logger = pino({
+    level: process.env.LOG_LEVEL ?? "info",
+    base: { service: "liquidator" }
+});
 
 const sqs = new SQSClient({});
 const gatewayApi = GatewayApiClient.initialize({
@@ -29,19 +35,16 @@ function toErrorFields(error: unknown) {
 
 function logEvent(level: LogLevel, event: string, fields: Record<string, unknown>) {
     const payload = {
-        level,
-        service: "liquidator",
         event,
         timestamp: new Date().toISOString(),
         ...fields
     };
 
-    const line = JSON.stringify(payload);
     if (level === "error") {
-        console.error(line);
+        logger.error(payload, event);
         return;
     }
-    console.log(line);
+    logger.info(payload, event);
 }
 
 

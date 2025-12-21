@@ -39,11 +39,11 @@ jobs:
         with:
           filters: |
             dispatcher:
-              - "functions/dispatcher/**"
+              - "services/functions/dispatcher/**"
             indexer:
-              - "containers/indexer/**"
+              - "services/containers/indexer/**"
             liquidator:
-              - "containers/liquidator/**"
+              - "services/containers/liquidator/**"
 
   test-dispatcher:
     runs-on: ubuntu-latest
@@ -63,10 +63,10 @@ jobs:
         run: corepack enable && corepack prepare pnpm@latest --activate
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: functions/dispatcher
+        working-directory: services/functions/dispatcher
       - name: Test
         run: pnpm test
-        working-directory: functions/dispatcher
+        working-directory: services/functions/dispatcher
 
   test-indexer:
     runs-on: ubuntu-latest
@@ -86,7 +86,7 @@ jobs:
         run: corepack enable && corepack prepare pnpm@latest --activate
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: containers/indexer
+        working-directory: services/containers/indexer
       - name: Test
         run: pnpm test
-        working-directory: containers/indexer
+        working-directory: services/containers/indexer

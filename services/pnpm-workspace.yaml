@@ -1,0 +1,5 @@
+packages:
+  - "containers/indexer"
+  - "containers/liquidator"
+  - "functions/dispatcher"
+  - "functions/oracle-updater"

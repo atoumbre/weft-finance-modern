@@ -3,11 +3,17 @@ import { DeleteMessageCommand, ReceiveMessageCommand, SendMessageCommand, SQSCli
 import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 import { WeftLedgerSateFetcher } from "@weft-finance/ledger-state";
 import Decimal from "decimal.js";
+import pino, { type Logger as PinoLogger } from "pino";
 
-type Logger = Pick<Console, "log" | "error">;
+type Logger = Pick<PinoLogger, "info" | "error">;
 export type Fetcher = Pick<WeftLedgerSateFetcher, "getMultipleCdp">;
 
 type LogLevel = "info" | "error";
+
+const defaultLogger = pino({
+    level: process.env.LOG_LEVEL ?? "info",
+    base: { service: "indexer" }
+});
 
 function requireEnv(name: string): string {
     const value = process.env[name];
@@ -29,19 +35,16 @@ function toErrorFields(error: unknown) {
 
 function logEvent(logger: Logger, level: LogLevel, event: string, fields: Record<string, unknown>) {
     const payload = {
-        level,
-        service: "indexer",
         event,
         timestamp: new Date().toISOString(),
         ...fields
     };
 
-    const line = JSON.stringify(payload);
     if (level === "error") {
-        logger.error(line);
+        logger.error(payload, event);
         return;
     }
-    logger.log(line);
+    logger.info(payload, event);
 }
 
 export function checkRisk(cdp: { liquidationLtv: Decimal }): boolean {
@@ -57,7 +60,7 @@ export function createMessageProcessor(params: {
     logger?: Logger;
     now?: () => Date;
 }) {
-    const logger: Logger = params.logger ?? console;
+    const logger: Logger = params.logger ?? defaultLogger;
     const now = params.now ?? (() => new Date());
 
     if (!params.liquidationQueueUrl) throw new Error("Missing liquidationQueueUrl");
@@ -230,7 +233,7 @@ export function createIndexerWorker(params: {
     logger?: Logger;
     now?: () => Date;
 }) {
-    const logger: Logger = params.logger ?? console;
+    const logger: Logger = params.logger ?? defaultLogger;
     if (!params.queueUrl) throw new Error("Missing queueUrl");
 
     const processMessage = createMessageProcessor({

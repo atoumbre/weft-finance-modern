@@ -5,11 +5,17 @@ import { randomUUID } from "crypto";
 import { SQSClient, SendMessageBatchCommand } from "@aws-sdk/client-sqs";
 import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
 import { WeftLedgerSateFetcher } from "@weft-finance/ledger-state";
+import pino, { type Logger as PinoLogger } from "pino";
 
-type Logger = Pick<Console, "log" | "error">;
+type Logger = Pick<PinoLogger, "info" | "error">;
 export type Fetcher = Pick<WeftLedgerSateFetcher, "getCdpIds">;
 
 type LogLevel = "info" | "error";
+
+const defaultLogger = pino({
+    level: process.env.LOG_LEVEL ?? "info",
+    base: { service: "dispatcher" }
+});
 
 function requireEnv(name: string): string {
     const value = process.env[name];
@@ -31,19 +37,16 @@ function toErrorFields(error: unknown) {
 
 function logEvent(logger: Logger, level: LogLevel, event: string, fields: Record<string, unknown>) {
     const payload = {
-        level,
-        service: "dispatcher",
         event,
         timestamp: new Date().toISOString(),
         ...fields
     };
 
-    const line = JSON.stringify(payload);
     if (level === "error") {
-        logger.error(line);
+        logger.error(payload, event);
         return;
     }
-    logger.log(line);
+    logger.info(payload, event);
 }
 
 
@@ -57,7 +60,7 @@ export function createDispatcherHandler(params: {
     logger?: Logger;
     runIdFactory?: () => string;
 }) {
-    const logger: Logger = params.logger ?? console;
+    const logger: Logger = params.logger ?? defaultLogger;
     const indexerBatchSize = params.indexerBatchSize;
     const queueUrl = params.indexerQueueUrl;
     const runIdFactory = params.runIdFactory ?? (() => randomUUID());

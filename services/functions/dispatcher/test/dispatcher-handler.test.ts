@@ -26,7 +26,7 @@ test("dispatches IDs in chunk-sized messages", async () => {
     fetcher,
     indexerQueueUrl: "https://example.com/indexer-queue",
     indexerBatchSize: 10,
-    logger: { log: () => { }, error: () => { } },
+    logger: { info: () => { }, error: () => { } },
     runIdFactory: () => "run-123",
   });
 
@@ -67,7 +67,7 @@ test("sends multiple SQS batches when there are >10 chunks", async () => {
     fetcher,
     indexerQueueUrl: "https://example.com/indexer-queue",
     indexerBatchSize: 5,
-    logger: { log: () => { }, error: () => { } },
+    logger: { info: () => { }, error: () => { } },
   });
 
   await handler();
@@ -128,7 +128,7 @@ test("propagates fetcher failures", async () => {
     fetcher,
     indexerQueueUrl: "https://example.com/indexer-queue",
     indexerBatchSize: 10,
-    logger: { log: () => { }, error: () => { } },
+    logger: { info: () => { }, error: () => { } },
   });
 
   await expect(handler()).rejects.toThrow("boom");

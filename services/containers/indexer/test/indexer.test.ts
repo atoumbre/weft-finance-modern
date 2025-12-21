@@ -6,7 +6,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { checkRisk, createIndexerWorker, createMessageProcessor, type Fetcher } from "../index";
 import { CollateralizeDebtPositionData } from "@weft-finance/ledger-state";
 
-const silentLogger = { log: () => undefined, error: () => undefined };
+const silentLogger = { info: () => undefined, error: () => undefined };
 
 
 
