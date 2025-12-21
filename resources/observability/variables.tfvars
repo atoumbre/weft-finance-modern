@@ -21,7 +21,6 @@ batch_size    = "8192"
 
 log_group_names = [
   "/aws/lambda/weft-mainnet-dispatcher",
-  "/aws/lambda/GrafanaCloudLambdaPromtail",
   "/aws/ecs/weft-mainnet-indexer",
   "/aws/ecs/weft-mainnet-liquidator"
 ]
