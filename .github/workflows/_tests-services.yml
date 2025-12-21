@@ -14,6 +14,7 @@ jobs:
       dispatcher: ${{ steps.filter.outputs.dispatcher }}
       indexer: ${{ steps.filter.outputs.indexer }}
       liquidator: ${{ steps.filter.outputs.liquidator }}
+      oracle_updater: ${{ steps.filter.outputs.oracle_updater }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -26,49 +27,37 @@ jobs:
               - "services/containers/indexer/**"
             liquidator:
               - "services/containers/liquidator/**"
+            oracle_updater:
+              - "services/functions/oracle-updater/**"
 
   test-dispatcher:
-    runs-on: ubuntu-latest
     needs: [filter]
     if: needs.filter.outputs.dispatcher == 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.2.13"
-      - name: Enable Corepack
-        run: corepack enable && corepack prepare pnpm@latest --activate
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: services/functions/dispatcher
-      - name: Test
-        run: pnpm test
-        working-directory: services/functions/dispatcher
+    uses: ./.github/workflows/__test-node-package.yml
+    with:
+      service-path: services/functions/dispatcher
+      service-name: dispatcher
 
   test-indexer:
-    runs-on: ubuntu-latest
     needs: [filter]
     if: needs.filter.outputs.indexer == 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.2.13"
-      - name: Enable Corepack
-        run: corepack enable && corepack prepare pnpm@latest --activate
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: services/containers/indexer
-      - name: Test
-        run: pnpm test
-        working-directory: services/containers/indexer
+    uses: ./.github/workflows/__test-node-package.yml
+    with:
+      service-path: services/containers/indexer
+      service-name: indexer
+
+  test-liquidator:
+    needs: [filter]
+    if: needs.filter.outputs.liquidator == 'true'
+    uses: ./.github/workflows/__test-node-package.yml
+    with:
+      service-path: services/containers/liquidator
+      service-name: liquidator
+
+  test-oracle-updater:
+    needs: [filter]
+    if: needs.filter.outputs.oracle_updater == 'true'
+    uses: ./.github/workflows/__test-node-package.yml
+    with:
+      service-path: services/functions/oracle-updater
+      service-name: oracle-updater

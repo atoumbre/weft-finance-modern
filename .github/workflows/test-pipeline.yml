@@ -8,31 +8,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  resources-filter:
-    runs-on: ubuntu-latest
-    outputs:
-      resources: ${{ steps.filter.outputs.resources }}
-      services: ${{ steps.filter.outputs.services }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            resources:
-              - "resources/**"
-            services:
-              - "services/**"
-
   typo-check:
     uses: ./.github/workflows/_typo-check.yml
 
   tests-services:
-    needs: [resources-filter]
-    if: needs.resources-filter.outputs.services == 'true'
     uses: ./.github/workflows/_tests-services.yml
 
   validate-resources:
-    needs: [resources-filter]
-    if: needs.resources-filter.outputs.resources == 'true'
     uses: ./.github/workflows/_validate-resources.yml

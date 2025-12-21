@@ -1,9 +1,7 @@
 name: Deployment Pipeline
 
 on:
-  workflow_run:
-    workflows: ["Test Pipeline"]
-    types: [completed]
+  push:
     branches: [main, stage]
   workflow_dispatch:
     inputs:
@@ -23,12 +21,25 @@ env:
   AWS_REGION: us-east-1
 
 jobs:
+  # Validation jobs
+  typo-check:
+    uses: ./.github/workflows/_typo-check.yml
+
+  tests-services:
+    uses: ./.github/workflows/_tests-services.yml
+
+  validate-resources:
+    uses: ./.github/workflows/_validate-resources.yml
+
+  # Gate for all deployments
   precheck:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'skipped')) }}
+    needs: [typo-check, tests-services, validate-resources]
+    if: ${{ always() && needs.typo-check.result == 'success' && needs.tests-services.result == 'success' && needs.validate-resources.result == 'success'  }}
     steps:
       - run: echo "Precheck passed."
 
+  # Determine target environment
   set-env:
     runs-on: ubuntu-latest
     needs: [precheck]
@@ -41,12 +52,7 @@ jobs:
           if [ -n "${{ github.event.inputs.environment }}" ]; then
             env_name="${{ github.event.inputs.environment }}"
           else
-            if [ "${{ github.event_name }}" = "workflow_run" ]; then
-              branch_name="${{ github.event.workflow_run.head_branch }}"
-            else
-              branch_name="${{ github.ref_name }}"
-            fi
-
+            branch_name="${{ github.ref_name }}"
             case "$branch_name" in
               main) env_name="mainnet" ;;
               stage) env_name="stokenet" ;;
@@ -55,100 +61,20 @@ jobs:
           fi
           echo "name=${env_name}" >> "$GITHUB_OUTPUT"
 
+  # Detect changes for conditional builds
   filter:
     runs-on: ubuntu-latest
     needs: [precheck]
     outputs:
-      admin: ${{ steps.filter.outputs.admin }}
-      backend: ${{ steps.filter.outputs.backend }}
       dispatcher: ${{ steps.filter.outputs.dispatcher }}
       indexer: ${{ steps.filter.outputs.indexer }}
       liquidator: ${{ steps.filter.outputs.liquidator }}
-      observability: ${{ steps.filter.outputs.observability }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 0 # Fetch full history to find previous workflow runs
-
-      - name: Find last successful workflow run
-        id: last-success
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "=== Finding last successful workflow run ==="
-
-          # Get current branch
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            branch_name="${{ github.event.workflow_run.head_branch }}"
-          else
-            branch_name="${{ github.ref_name }}"
-          fi
-          echo "Current branch: ${branch_name}"
-
-          # Get current HEAD SHA
-          head_sha="$(git rev-parse HEAD)"
-          echo "Current HEAD SHA: ${head_sha}"
-
-          # Find the last successful run of this workflow on the same branch
-          echo "Searching for last successful 'Weft Pipeline' workflow run on branch '${branch_name}'..."
-          echo "Checking last 50 workflow runs..."
-
-          last_success=$(gh run list \
-            --workflow="Weft Pipeline" \
-            --branch="${branch_name}" \
-            --status=success \
-            --limit=50 \
-            --json headSha,conclusion,status,createdAt,databaseId \
-            --jq '[.[] | select(.conclusion == "success" and .headSha != "'"${head_sha}"'")][0].headSha' || echo "")
-
-          if [ -z "$last_success" ] || [ "$last_success" = "null" ]; then
-            echo "⚠️  No previous successful run found in last 50 runs"
-            echo "Falling back to HEAD^ for comparison"
-            if git rev-parse HEAD^ >/dev/null 2>&1; then
-              base_sha="$(git rev-parse HEAD^)"
-              echo "Using HEAD^ as base: ${base_sha}"
-            else
-              base_sha="$(git rev-parse HEAD)"
-              echo "⚠️  No parent commit found, using HEAD as base: ${base_sha}"
-            fi
-          else
-            echo "✅ Found last successful run at commit: ${last_success}"
-            base_sha="$last_success"
-            
-            # Calculate number of commits between base and head
-            commit_count=$(git rev-list --count ${base_sha}..${head_sha} 2>/dev/null || echo "unknown")
-            echo "📊 Commits since last successful run: ${commit_count}"
-            
-            # Show the commits being compared
-            echo ""
-            echo "=== Commits included in this diff ==="
-            git log --oneline ${base_sha}..${head_sha} || echo "Could not display commit log"
-          fi
-
-          echo ""
-          echo "=== Comparison Summary ==="
-          echo "Base SHA:  ${base_sha}"
-          echo "Head SHA:  ${head_sha}"
-          echo "Comparing: ${base_sha}...${head_sha}"
-          echo ""
-
-          # Output for GitHub Actions
-          echo "base_sha=${base_sha}" >> "$GITHUB_OUTPUT"
-          echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
-
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          base: ${{ steps.last-success.outputs.base_sha }}
-          ref: ${{ steps.last-success.outputs.head_sha }}
           filters: |
-            admin:
-              - "resources/admin/**"
-            backend:
-              - "resources/backend/**"
-            observability:
-              - "resources/observability/**"
             dispatcher:
               - "services/functions/dispatcher/**"
             indexer:
@@ -156,154 +82,43 @@ jobs:
             liquidator:
               - "services/containers/liquidator/**"
 
-  setup-terraform:
-    runs-on: ubuntu-latest
-    needs: [set-env]
-    if: ${{ needs.filter.outputs.admin == 'true' || needs.filter.outputs.backend == 'true' || needs.filter.outputs.observability == 'true' }}
-    steps:
-      - name: Cache Terraform
-        uses: actions/cache@v4
-        with:
-          path: ~/.terraform.d/plugin-cache
-          key: ${{ runner.os }}-terraform-${{ env.TERRAFORM_VERSION }}
-          restore-keys: |
-            ${{ runner.os }}-terraform-
-
+  # Deploy infrastructure (always runs, Terraform handles diffs)
   deploy-admin:
-    needs: [filter, set-env]
-    if: ${{ needs.filter.outputs.admin == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Get AWS Account ID
-        id: account
-        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
-
-      - name: Terraform Init
-        working-directory: resources/admin
-        run: |
-          terraform init -reconfigure \
-            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
-            -backend-config="dynamodb_table=weft-terraform-state-locks" \
-            -backend-config="key=admin.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}"
-
-      - name: Terraform Apply
-        working-directory: resources/admin
-        run: terraform apply -auto-approve
+    needs: [set-env]
+    uses: ./.github/workflows/__deploy-terraform.yml
+    secrets: inherit
+    with:
+      resource-name: admin
+      resource-path: resources/admin
+      terraform-key: admin.tfstate
+      terraform-vars: ""
 
   deploy-backend:
-    needs: [filter, set-env]
-    if: ${{ needs.filter.outputs.backend == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Enable Corepack & Setup PNPM
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
-      - name: Get PNPM store directory
-        id: pnpm-cache
-        shell: bash
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Setup PNPM cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Get AWS Account ID
-        id: account
-        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
-
-      - name: Terraform Init
-        working-directory: resources/backend
-        run: |
-          terraform init -reconfigure \
-            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
-            -backend-config="dynamodb_table=weft-terraform-state-locks" \
-            -backend-config="key=weft-${{ needs.set-env.outputs.name }}.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}"
-
-      - name: Terraform Apply
-        working-directory: resources/backend
-        run: terraform apply -var-file="${{ needs.set-env.outputs.name }}.tfvars" -auto-approve
+    needs: [set-env]
+    uses: ./.github/workflows/__deploy-terraform.yml
+    secrets: inherit
+    with:
+      resource-name: backend
+      resource-path: resources/backend
+      terraform-key: weft-${{ needs.set-env.outputs.name }}.tfstate
+      terraform-vars: ${{ needs.set-env.outputs.name }}.tfvars
+      environment: ${{ needs.set-env.outputs.name }}
 
   deploy-observability:
-    needs: [filter, set-env]
-    if: ${{ needs.filter.outputs.observability == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    needs: [set-env]
+    uses: ./.github/workflows/__deploy-terraform.yml
+    secrets: inherit
+    with:
+      resource-name: observability
+      resource-path: resources/observability
+      terraform-key: observability.tfstate
+      terraform-vars: variables.tfvars
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Get AWS Account ID
-        id: account
-        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
-
-      - name: Terraform Init
-        working-directory: resources/observability
-        run: |
-          terraform init -reconfigure \
-            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
-            -backend-config="dynamodb_table=weft-terraform-state-locks" \
-            -backend-config="key=observability.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}"
-
-      - name: Terraform Apply
-        working-directory: resources/observability
-        run: terraform apply -var-file="variables.tfvars" -auto-approve
-
+  # Build container images if code changed
   build-indexer:
     needs: [filter]
-    if: ${{ needs.filter.outputs.indexer == 'true' }}
-    uses: ./.github/workflows/_build-and-push-containers.yml
+    if: needs.filter.outputs.indexer == 'true'
+    uses: ./.github/workflows/__build-and-push-containers.yml
     with:
       service_name: indexer
       service_path: services/containers/indexer
@@ -314,8 +129,8 @@ jobs:
 
   build-liquidator:
     needs: [filter]
-    if: ${{ needs.filter.outputs.liquidator == 'true' }}
-    uses: ./.github/workflows/_build-and-push-containers.yml
+    if: needs.filter.outputs.liquidator == 'true'
+    uses: ./.github/workflows/__build-and-push-containers.yml
     with:
       service_name: liquidator
       service_path: services/containers/liquidator
@@ -324,77 +139,46 @@ jobs:
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
+  # Deploy services after infrastructure is ready
   deploy-indexer:
-    needs: [build-indexer, deploy-backend, set-env]
-    if: ${{ always() && needs.build-indexer.result == 'success' && (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped') }}
-    uses: ./.github/workflows/_deploy-service.yml
+    needs:
+      [
+        build-indexer,
+        deploy-admin,
+        deploy-backend,
+        deploy-observability,
+        set-env,
+      ]
+    if: ${{ always() && needs.build-indexer.result == 'success' }}
+    uses: ./.github/workflows/__deploy-service.yml
     secrets: inherit
     with:
       service_name: indexer
       environment: ${{ needs.set-env.outputs.name }}
 
   deploy-liquidator:
-    needs: [build-liquidator, deploy-backend, set-env]
-    if: ${{ always() && needs.build-liquidator.result == 'success' && (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped') }}
-    uses: ./.github/workflows/_deploy-service.yml
+    needs:
+      [
+        build-liquidator,
+        deploy-admin,
+        deploy-backend,
+        deploy-observability,
+        set-env,
+      ]
+    if: ${{ always() && needs.build-liquidator.result == 'success' }}
+    uses: ./.github/workflows/__deploy-service.yml
     secrets: inherit
     with:
       service_name: liquidator
       environment: ${{ needs.set-env.outputs.name }}
 
   deploy-dispatcher:
-    needs: [filter, deploy-backend, set-env]
-    if: ${{ always() && needs.filter.outputs.dispatcher == 'true' && (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped') }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Enable Corepack & Setup PNPM
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
-      - name: Get PNPM store directory
-        id: pnpm-cache
-        shell: bash
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Setup PNPM cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: services/functions/dispatcher
-
-      - name: Bundle
-        run: pnpm run bundle
-        working-directory: services/functions/dispatcher
-
-      - name: Package Lambda
-        run: zip -r dispatcher.zip dist
-        working-directory: services/functions/dispatcher
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Update Lambda Function
-        run: |
-          aws lambda update-function-code \
-            --function-name "weft-${{ needs.set-env.outputs.name }}-dispatcher" \
-            --zip-file "fileb://services/functions/dispatcher/dispatcher.zip"
+    needs: [filter, deploy-admin, deploy-backend, deploy-observability, set-env]
+    if: ${{ always() && needs.filter.outputs.dispatcher == 'true' }}
+    uses: ./.github/workflows/__deploy-lambda.yml
+    secrets: inherit
+    with:
+      service-name: dispatcher
+      service-path: services/functions/dispatcher
+      function-name: weft-${{ needs.set-env.outputs.name }}-dispatcher
+      environment: ${{ needs.set-env.outputs.name }}

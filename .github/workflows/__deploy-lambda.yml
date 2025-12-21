@@ -1,0 +1,97 @@
+name: Deploy Lambda
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        required: true
+        type: string
+        description: "Name of the service"
+      service-path:
+        required: true
+        type: string
+        description: "Path to the service directory"
+      function-name:
+        required: true
+        type: string
+        description: "AWS Lambda function name"
+      environment:
+        required: true
+        type: string
+        description: "Environment name"
+      node-version:
+        required: false
+        type: string
+        default: "20"
+        description: "Node.js version"
+      bun-version:
+        required: false
+        type: string
+        default: "1.2.13"
+        description: "Bun version"
+      aws-region:
+        required: false
+        type: string
+        default: "us-east-1"
+        description: "AWS region"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy ${{ inputs.service-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+
+      - name: Enable Corepack & Setup PNPM
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Get PNPM store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup PNPM cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: ${{ inputs.service-path }}
+
+      - name: Bundle
+        run: pnpm run bundle
+        working-directory: ${{ inputs.service-path }}
+
+      - name: Package Lambda
+        run: zip -r ${{ inputs.service-name }}.zip dist
+        working-directory: ${{ inputs.service-path }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/weft-github-actions-role
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Update Lambda Function
+        run: |
+          aws lambda update-function-code \
+            --function-name "${{ inputs.function-name }}" \
+            --zip-file "fileb://${{ inputs.service-path }}/${{ inputs.service-name }}.zip"

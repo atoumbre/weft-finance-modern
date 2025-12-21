@@ -1,0 +1,58 @@
+name: Test Service
+
+on:
+  workflow_call:
+    inputs:
+      service-path:
+        required: true
+        type: string
+        description: "Path to the service directory"
+      service-name:
+        required: true
+        type: string
+        description: "Name of the service"
+      node-version:
+        required: false
+        type: string
+        default: "20"
+        description: "Node.js version to use"
+      bun-version:
+        required: false
+        type: string
+        default: "1.2.13"
+        description: "Bun version to use"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test ${{ inputs.service-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+
+      - name: Enable Corepack
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: services
+
+      - name: Build
+        run: pnpm run build
+        working-directory: ${{ inputs.service-path }}
+
+      - name: Test
+        run: pnpm run test --if-present
+        working-directory: ${{ inputs.service-path }}

@@ -1,0 +1,45 @@
+name: Validate Terraform
+
+on:
+  workflow_call:
+    inputs:
+      resource-path:
+        required: true
+        type: string
+        description: "Path to the Terraform resource directory"
+      resource-name:
+        required: true
+        type: string
+        description: "Name of the resource"
+      terraform-version:
+        required: false
+        type: string
+        default: "1.6.0"
+        description: "Terraform version to use"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate ${{ inputs.resource-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+
+      - name: Terraform fmt
+        run: terraform fmt -check
+        working-directory: ${{ inputs.resource-path }}
+
+      - name: Terraform init
+        run: terraform init -backend=false
+        working-directory: ${{ inputs.resource-path }}
+
+      - name: Terraform validate
+        run: terraform validate -no-color
+        working-directory: ${{ inputs.resource-path }}

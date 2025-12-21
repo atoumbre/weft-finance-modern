@@ -3,28 +3,50 @@ name: Resources Checking
 on:
   workflow_call:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
-  validate:
+  filter:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        dir:
-          - resources/admin
-          - resources/backend
-          - resources/observability
+    outputs:
+      admin: ${{ steps.filter.outputs.admin }}
+      backend: ${{ steps.filter.outputs.backend }}
+      observability: ${{ steps.filter.outputs.observability }}
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: dorny/paths-filter@v3
+        id: filter
         with:
-          terraform_version: "1.6.0"
-      - name: Terraform fmt
-        run: terraform fmt -check
-        working-directory: ${{ matrix.dir }}
-      - name: Terraform init
-        run: terraform init -backend=false
-        working-directory: ${{ matrix.dir }}
-      - name: Terraform validate
-        run: terraform validate -no-color
-        working-directory: ${{ matrix.dir }}
+          filters: |
+            admin:
+              - "resources/admin/**"
+            backend:
+              - "resources/backend/**"
+            observability:
+              - "resources/observability/**"
+
+  validate-admin:
+    needs: [filter]
+    if: needs.filter.outputs.admin == 'true'
+    uses: ./.github/workflows/__validate-terraform.yml
+    with:
+      resource-path: resources/admin
+      resource-name: admin
+
+  validate-backend:
+    needs: [filter]
+    if: needs.filter.outputs.backend == 'true'
+    uses: ./.github/workflows/__validate-terraform.yml
+    with:
+      resource-path: resources/backend
+      resource-name: backend
+
+  validate-observability:
+    needs: [filter]
+    if: needs.filter.outputs.observability == 'true'
+    uses: ./.github/workflows/__validate-terraform.yml
+    with:
+      resource-path: resources/observability
+      resource-name: observability
