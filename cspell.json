@@ -21,6 +21,7 @@
     "./**/*.tfstate",
     "./**/*.tfstate.backup",
     "./**/*.zip",
+    "./**/*wallet*",
     "./**/pnpm-lock.yaml",
     "./**/pnpm-workspace.yaml"
   ],
