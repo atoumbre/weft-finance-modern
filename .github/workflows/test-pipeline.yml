@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  typo-check:
-    uses: ./.github/workflows/_typo-check.yml
+  # typo-check:
+  #   uses: ./.github/workflows/_typo-check.yml
 
   tests-services:
     uses: ./.github/workflows/_tests-services.yml

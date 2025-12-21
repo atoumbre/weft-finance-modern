@@ -1,5 +1,5 @@
 {
-  "name": "weft-backend",
+  "name": "weft-backend-services",
   "private": true,
   "scripts": {
     "build": "pnpm -r run build",

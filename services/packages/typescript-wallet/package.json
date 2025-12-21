@@ -1,0 +1,39 @@
+{
+  "name": "typescript-wallet",
+  "type": "module",
+  "license": "SEE LICENSE",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "typo-check": "cspell -c ../../cspell.json . --quiet",
+    "examples:generate-mnemonic": "bun ./examples/scripts/generate-mnemonic.ts",
+    "examples:faucet": "bun ./examples/scripts/faucet.ts",
+    "examples:account-address": "bun ./examples/scripts/account-address.ts",
+    "examples:deploy-package": "bun ./examples/deploy-package.ts",
+    "examples:gw:well-known": "bun ./examples/scripts/gw/well-known.ts",
+    "examples:gw:tx:lookup": "bun ./examples/scripts/gw/lookup-tx.ts",
+    "examples:gw:status": "bun ./examples/scripts/gw/status.ts",
+    "examples:gw:state:details": "bun ./examples/scripts/gw/state-details.ts"
+  },
+  "dependencies": {
+    "@radixdlt/babylon-gateway-api-sdk": "^1.10.1",
+    "@radixdlt/radix-engine-toolkit": "^1.0.6",
+    "bip39": "^3.1.0",
+    "blakejs": "^1.2.1",
+    "dotenv": "^16.4.5",
+    "ed25519-hd-key": "^1.3.0",
+    "hdkey": "^2.1.0",
+    "lodash.chunk": "^4.2.0",
+    "neverthrow": "^7.0.0",
+    "rxjs": "^7.8.1",
+    "tslog": "^4.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}

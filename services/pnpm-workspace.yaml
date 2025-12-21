@@ -3,3 +3,4 @@ packages:
   - "containers/liquidator"
   - "functions/dispatcher"
   - "functions/oracle-updater"
+  - "packages/typescript-wallet"
