@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "scripts": {
         "build": "tsc",
-        "test": "tsc"
+        "test": "pnpm run build && bun test"
     },
     "dependencies": {
         "@aws-sdk/client-cloudwatch": "^3.450.0",
