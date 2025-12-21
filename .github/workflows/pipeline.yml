@@ -2,7 +2,7 @@ name: Weft Pipeline
 
 on:
   workflow_run:
-    workflows: ["Tests"]
+    workflows: ["Services Testing", "Resources Checking"]
     types: [completed]
     branches: [main, stage]
   workflow_dispatch:

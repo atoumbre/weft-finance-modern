@@ -1,4 +1,4 @@
-name: Typo checks
+name: Typo Checking
 
 on:
   push:
