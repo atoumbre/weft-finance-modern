@@ -11,8 +11,20 @@ jobs:
   # typo-check:
   #   uses: ./.github/workflows/_typo-check.yml
 
+  typo-check:
+    uses: ./.github/workflows/_typo-check.yml
+    permissions:
+      contents: read
+      pull-requests: read
+
   tests-services:
     uses: ./.github/workflows/_tests-services.yml
+    permissions:
+      contents: read
+      pull-requests: read
 
   validate-resources:
     uses: ./.github/workflows/_validate-resources.yml
+    permissions:
+      contents: read
+      pull-requests: read
