@@ -4,8 +4,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "bundle": "esbuild index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js",
-    "test": "bun test"
+    "bundle": "esbuild index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js"
   },
   "dependencies": {
     "pino": "^9.0.0"
