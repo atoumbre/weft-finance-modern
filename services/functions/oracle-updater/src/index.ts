@@ -1,10 +1,81 @@
 import { randomUUID } from "crypto";
 import pino from "pino";
-import { AssetConfig, ASSETS } from './const'
-//
+
+/* cSpell:disable */
+
+export type AssetConfig = {
+    symbol: string;
+    resourceAddress: string;
+    fixedPriceXrd?: string;
+    pythId?: string;
+    coingeckoId?: string;
+};
+
+export const ASSETS: AssetConfig[] = [
+    {
+        symbol: "XRD",
+        resourceAddress: "resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd",
+        fixedPriceXrd: "1",
+        pythId: "0x816c6604beb161d3ad9c3b584f06c682e6299516165d756a68c7660b073b7072",
+        coingeckoId: "radix"
+    },
+    {
+        symbol: "xUSDT",
+        resourceAddress: "resource_rdx1thrvr3xfs2tarm2dl9emvs26vjqxu6mqvfgvqjne940jv0lnrrg7rw",
+        pythId: "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+        coingeckoId: "tether"
+    },
+    {
+        symbol: "xUSDC",
+        resourceAddress: "resource_rdx1t4upr78guuapv5ept7d7ptekk9mqhy605zgms33mcszen8l9fac8vf",
+        pythId: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+        coingeckoId: "usd-coin"
+    },
+    {
+        symbol: "xETH",
+        resourceAddress: "resource_rdx1th88qcj5syl9ghka2g9l7tw497vy5x6zaatyvgfkwcfe8n9jt2npww",
+        pythId: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+        coingeckoId: "ethereum"
+    },
+    {
+        symbol: "xwBTC",
+        resourceAddress: "resource_rdx1t580qxc7upat7lww4l2c4jckacafjeudxj5wpjrrct0p3e82sq4y75",
+        pythId: "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+        coingeckoId: "bitcoin"
+    },
+    {
+        symbol: "hUSDT",
+        resourceAddress: "resource_rdx1th4v03gezwgzkuma6p38lnum8ww8t4ds9nvcrkr2p9ft6kxx3kxvhe",
+        pythId: "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+        coingeckoId: "tether"
+    },
+    {
+        symbol: "hUSDC",
+        resourceAddress: "resource_rdx1thxj9m87sn5cc9ehgp9qxp6vzeqxtce90xm5cp33373tclyp4et4gv",
+        pythId: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+        coingeckoId: "usd-coin"
+    },
+    {
+        symbol: "hETH",
+        resourceAddress: "resource_rdx1th09yvv7tgsrv708ffsgqjjf2mhy84mscmj5jwu4g670fh3e5zgef0",
+        pythId: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+        coingeckoId: "ethereum"
+    },
+    {
+        symbol: "hWBTC",
+        resourceAddress: "resource_rdx1t58kkcqdz0mavfz98m98qh9m4jexyl9tacsvlhns6yxs4r6hrm5re5",
+        pythId: "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+        coingeckoId: "bitcoin"
+    },
+    {
+        symbol: "hSOL",
+        resourceAddress: "resource_rdx1t5ljlq97xfcewcdjxsqld89443fchqg96xv8a8k8gdftdycy9haxpx",
+        pythId: "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+        coingeckoId: "solana"
+    }
+];
 
 type LogLevel = "info" | "error";
-
 
 type PriceSource = "fixed" | "pyth" | "coingecko";
 
@@ -28,44 +99,12 @@ type PriceResult = {
 
 const NORMALIZED_SCALE = 18;
 
-
 type FetchOptions = {
     pythBaseUrl: string;
     coingeckoBaseUrl: string;
     timeoutMs: number;
     maxPriceAgeSec?: number;
 };
-
-function requireEnv(name: string): string {
-    const value = process.env[name];
-    if (!value) throw new Error(`Missing required env var: ${name}`);
-    return value;
-}
-
-function optionalEnv(name: string): string | undefined {
-    const value = process.env[name];
-    return value && value.trim().length > 0 ? value : undefined;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
-}
-
-function toErrorFields(error: unknown) {
-    if (error instanceof Error) {
-        return {
-            errorName: error.name,
-            errorMessage: error.message,
-            errorStack: error.stack
-        };
-    }
-    return { errorMessage: String(error) };
-}
-
-const logger = pino({
-    level: process.env.LOG_LEVEL ?? "info",
-    base: { service: "oracle-updater" }
-});
 
 function logEvent(level: LogLevel, event: string, fields: Record<string, unknown>) {
     const payload = {
@@ -325,44 +364,31 @@ async function fetchCoinGeckoBatch(ids: string[], options: FetchOptions, runId: 
     }
 }
 
-async function resolveUsdPrice(
+function resolveUsdPrice(
     asset: AssetConfig,
-    options: FetchOptions,
-    runId: string,
     pythMap: Map<string, PythEntry>,
-    pythBatchError?: unknown,
-    coingeckoMap?: Map<string, CoinGeckoEntry>,
-    coingeckoError?: unknown
-): Promise<PriceQuote> {
-    if (asset.pythPriceIdEnv) {
-        const priceId = optionalEnv(asset.pythPriceIdEnv);
-        if (!priceId) {
-            logEvent("error", "oracle.price.pyth_missing_id", {
-                runId,
-                symbol: asset.symbol,
-                resourceAddress: asset.resourceAddress,
-                env: asset.pythPriceIdEnv
-            });
-        } else if (pythBatchError) {
-            logEvent("error", "oracle.price.pyth_failed", {
-                runId,
-                symbol: asset.symbol,
-                resourceAddress: asset.resourceAddress,
-                ...toErrorFields(pythBatchError)
-            });
-        } else {
-            const entry = getPythEntry(priceId, pythMap, options, runId, {
-                symbol: asset.symbol,
-                resourceAddress: asset.resourceAddress
-            });
-            if (entry) {
-                logEvent("info", "oracle.price.pyth", {
-                    runId,
-                    symbol: asset.symbol,
-                    resourceAddress: asset.resourceAddress,
-                    price: entry.price,
-                    publishTime: entry.publishTime
-                });
+    coingeckoMap: Map<string, CoinGeckoEntry>,
+    options: FetchOptions
+): PriceQuote | null {
+    // Try Pyth first
+    if (asset.pythId) {
+        const normalizedId = normalizeHexId(asset.pythId);
+        const entry = pythMap.get(normalizedId);
+
+        if (entry) {
+            // Check staleness if maxPriceAgeSec is set
+            if (options.maxPriceAgeSec && entry.publishTime) {
+                const ageSec = Math.floor(Date.now() / 1000) - entry.publishTime;
+                if (ageSec <= options.maxPriceAgeSec) {
+                    return {
+                        symbol: asset.symbol,
+                        resourceAddress: asset.resourceAddress,
+                        usdPrice: entry.price,
+                        source: "pyth",
+                        publishTime: entry.publishTime
+                    };
+                }
+            } else if (!options.maxPriceAgeSec) {
                 return {
                     symbol: asset.symbol,
                     resourceAddress: asset.resourceAddress,
@@ -374,97 +400,57 @@ async function resolveUsdPrice(
         }
     }
 
-    if (!asset.coingeckoId) {
-        throw new Error(`Missing CoinGecko id for ${asset.symbol}`);
-    }
-
-    if (coingeckoError) {
-        logEvent("error", "oracle.price.coingecko_failed", {
-            runId,
-            symbol: asset.symbol,
-            resourceAddress: asset.resourceAddress,
-            ...toErrorFields(coingeckoError)
-        });
-    }
-
-    const entry = coingeckoMap?.get(asset.coingeckoId);
-    if (!entry) {
-        throw new Error(`CoinGecko price missing for ${asset.symbol}`);
-    }
-
-    logEvent("info", "oracle.price.coingecko", {
-        runId,
-        symbol: asset.symbol,
-        resourceAddress: asset.resourceAddress,
-        price: entry.price
-    });
-
-    return {
-        symbol: asset.symbol,
-        resourceAddress: asset.resourceAddress,
-        usdPrice: entry.price,
-        source: "coingecko"
-    };
-}
-
-async function fetchXrdUsdPrice(
-    options: FetchOptions,
-    runId: string,
-    pythMap: Map<string, PythEntry>,
-    pythBatchError?: unknown,
-    coingeckoMap?: Map<string, CoinGeckoEntry>,
-    coingeckoError?: unknown
-): Promise<{ price: string; source: "pyth" | "coingecko" }> {
-    const asset: AssetConfig = {
-        symbol: "XRD/USD",
-        resourceAddress: "xrd-usd",
-        pythPriceIdEnv: "PYTH_PRICE_ID_XRD_USD"
-    };
-
-    const priceId = optionalEnv("PYTH_PRICE_ID_XRD_USD");
-    if (!priceId) {
-        logEvent("error", "oracle.price.xrd.pyth_missing_id", { runId });
-    } else if (pythBatchError) {
-        logEvent("error", "oracle.price.xrd.pyth_failed", {
-            runId,
-            ...toErrorFields(pythBatchError)
-        });
-    } else {
-        const entry = getPythEntry(priceId, pythMap, options, runId, {
-            symbol: asset.symbol,
-            resourceAddress: asset.resourceAddress
-        });
+    // Fallback to CoinGecko
+    if (asset.coingeckoId) {
+        const entry = coingeckoMap.get(asset.coingeckoId);
         if (entry) {
-            logEvent("info", "oracle.price.pyth", {
-                runId,
+            return {
                 symbol: asset.symbol,
                 resourceAddress: asset.resourceAddress,
-                price: entry.price,
-                publishTime: entry.publishTime
-            });
-            return { price: entry.price, source: "pyth" };
+                usdPrice: entry.price,
+                source: "coingecko"
+            };
         }
     }
 
-    if (coingeckoError) {
-        logEvent("error", "oracle.price.xrd.coingecko_failed", {
-            runId,
-            ...toErrorFields(coingeckoError)
-        });
+    return null;
+}
+
+function getXrdUsdPrice(
+    pythMap: Map<string, PythEntry>,
+    coingeckoMap: Map<string, CoinGeckoEntry>,
+    options: FetchOptions
+): { price: string; source: "pyth" | "coingecko" } {
+    const xrdAsset = ASSETS.find(a => a.symbol === "XRD");
+    if (!xrdAsset) {
+        throw new Error("XRD asset not found in ASSETS");
     }
 
-    const entry = coingeckoMap?.get("radix");
-    if (!entry) {
-        throw new Error("CoinGecko response missing radix.usd price");
+    // Try Pyth first
+    if (xrdAsset.pythId) {
+        const normalizedId = normalizeHexId(xrdAsset.pythId);
+        const entry = pythMap.get(normalizedId);
+
+        if (entry) {
+            const isValid = !options.maxPriceAgeSec ||
+                !entry.publishTime ||
+                (Math.floor(Date.now() / 1000) - entry.publishTime) <= options.maxPriceAgeSec;
+
+            if (isValid) {
+                return { price: entry.price, source: "pyth" };
+            }
+        }
     }
 
-    logEvent("info", "oracle.price.coingecko", {
-        runId,
-        symbol: asset.symbol,
-        price: entry.price
-    });
+    // Fallback to CoinGecko
+    if (xrdAsset.coingeckoId) {
+        const entry = coingeckoMap.get(xrdAsset.coingeckoId);
+        if (entry) {
+            return { price: entry.price, source: "coingecko" };
+        }
+    }
 
-    return { price: entry.price, source: "coingecko" };
+    throw new Error("Failed to fetch XRD/USD price from both Pyth and CoinGecko");
 }
 
 function buildManifest(params: {
@@ -509,7 +495,7 @@ export const handler = async () => {
 
     const pythBaseUrl = optionalEnv("PYTH_HERMES_URL") ?? "https://hermes.pyth.network";
     const coingeckoBaseUrl = optionalEnv("COINGECKO_BASE_URL") ?? "https://api.coingecko.com";
-    const timeoutMs = Number(optionalEnv("PRICE_FETCH_TIMEOUT_MS") ?? "8000");
+    const timeoutMs = Number(optionalEnv("PRICE_FETCH_TIMEOUT_MS") ?? "5000");
     const maxPriceAgeSec = optionalEnv("PYTH_MAX_AGE_SEC");
 
     const options: FetchOptions = {
@@ -529,68 +515,44 @@ export const handler = async () => {
     try {
         const prices: PriceResult[] = [];
         const pythIds = new Set<string>();
-        const xrdPythId = optionalEnv("PYTH_PRICE_ID_XRD_USD");
-        if (xrdPythId) {
-            pythIds.add(xrdPythId);
-        }
-        for (const asset of ASSETS) {
-            if (!asset.pythPriceIdEnv) continue;
-            const id = optionalEnv(asset.pythPriceIdEnv);
-            if (id) {
-                pythIds.add(id);
-            } else {
-                logEvent("error", "oracle.price.pyth_missing_id", {
-                    runId,
-                    symbol: asset.symbol,
-                    resourceAddress: asset.resourceAddress,
-                    env: asset.pythPriceIdEnv
-                });
-            }
-        }
-
-        const { map: pythMap, error: pythError } = await fetchPythBatch(Array.from(pythIds), options, runId);
         const fallbackCoinGeckoIds = new Set<string>();
-        if (!xrdPythId || pythError || (xrdPythId && !isPythEntryUsable(xrdPythId, pythMap, options))) {
-            fallbackCoinGeckoIds.add("radix");
-        }
+
+        // Collect all Pyth IDs and CoinGecko IDs upfront
+        const allCoinGeckoIds = new Set<string>();
 
         for (const asset of ASSETS) {
-            if (!asset.coingeckoId) {
-                continue;
+            if (asset.pythId) {
+                pythIds.add(asset.pythId);
             }
-            if (!asset.pythPriceIdEnv) {
-                fallbackCoinGeckoIds.add(asset.coingeckoId);
-                continue;
-            }
-
-            const priceId = optionalEnv(asset.pythPriceIdEnv);
-            if (!priceId || pythError || !isPythEntryUsable(priceId, pythMap, options)) {
-                fallbackCoinGeckoIds.add(asset.coingeckoId);
+            // Always collect CoinGecko IDs for potential fallback
+            if (asset.coingeckoId) {
+                allCoinGeckoIds.add(asset.coingeckoId);
             }
         }
 
-        const { map: coingeckoMap, error: coingeckoError } = await fetchCoinGeckoBatch(
-            Array.from(fallbackCoinGeckoIds),
-            options,
-            runId
-        );
+        // Fetch both Pyth and CoinGecko in parallel
+        const [pythResult, coingeckoResult] = await Promise.all([
+            fetchPythBatch(Array.from(pythIds), options, runId),
+            fetchCoinGeckoBatch(Array.from(allCoinGeckoIds), options, runId)
+        ]);
 
-        const xrdQuote = await fetchXrdUsdPrice(options, runId, pythMap, pythError, coingeckoMap, coingeckoError);
+        const pythMap = pythResult.map;
+        const coingeckoMap = coingeckoResult.map;
+
+        // Get XRD/USD price
+        const xrdQuote = getXrdUsdPrice(pythMap, coingeckoMap, options);
         const xrdUsdPrice = xrdQuote.price;
+
         logEvent("info", "oracle.price.xrd_usd", {
             runId,
             price: xrdUsdPrice,
             source: xrdQuote.source
         });
 
+        // Process each asset
         for (const asset of ASSETS) {
+            // Handle fixed price assets
             if (asset.fixedPriceXrd) {
-                logEvent("info", "oracle.price.fixed", {
-                    runId,
-                    symbol: asset.symbol,
-                    resourceAddress: asset.resourceAddress,
-                    price: asset.fixedPriceXrd
-                });
                 prices.push({
                     symbol: asset.symbol,
                     resourceAddress: asset.resourceAddress,
@@ -600,17 +562,21 @@ export const handler = async () => {
                 continue;
             }
 
-            const quote = await resolveUsdPrice(asset, options, runId, pythMap, pythError, coingeckoMap, coingeckoError);
+            // Get USD price (with fallback logic)
+            const quote = resolveUsdPrice(asset, pythMap, coingeckoMap, options);
+
+            if (!quote) {
+                logEvent("error", "oracle.price.failed", {
+                    runId,
+                    symbol: asset.symbol,
+                    resourceAddress: asset.resourceAddress
+                });
+                continue;
+            }
+
+            // Normalize to XRD
             const normalized = normalizeUsdToXrd(quote.usdPrice, xrdUsdPrice, NORMALIZED_SCALE);
-            logEvent("info", "oracle.price.normalized", {
-                runId,
-                symbol: asset.symbol,
-                resourceAddress: asset.resourceAddress,
-                usdPrice: quote.usdPrice,
-                xrdUsdPrice,
-                price: normalized,
-                source: quote.source
-            });
+
             prices.push({
                 symbol: asset.symbol,
                 resourceAddress: asset.resourceAddress,
@@ -620,6 +586,10 @@ export const handler = async () => {
                 usdPrice: quote.usdPrice,
                 xrdUsdPrice
             });
+        }
+
+        if (prices.length === 0) {
+            throw new Error("No prices were successfully fetched");
         }
 
         const manifest = buildManifest({
@@ -633,6 +603,10 @@ export const handler = async () => {
         logEvent("info", "oracle.manifest.ready", {
             runId,
             priceCount: prices.length,
+            successfulAssets: prices.map(p => p.symbol),
+            pythCount: prices.filter(p => p.source === "pyth").length,
+            coingeckoCount: prices.filter(p => p.source === "coingecko").length,
+            fixedCount: prices.filter(p => p.source === "fixed").length,
             durationMs: Date.now() - startedAt,
             manifestLength: manifest.length
         });
@@ -653,3 +627,34 @@ export const handler = async () => {
         throw error;
     }
 };
+
+export function requireEnv(name: string): string {
+    const value = process.env[name];
+    if (!value) throw new Error(`Missing required env var: ${name}`);
+    return value;
+}
+
+export function optionalEnv(name: string): string | undefined {
+    const value = process.env[name];
+    return value && value.trim().length > 0 ? value : undefined;
+}
+
+export function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+}
+
+export function toErrorFields(error: unknown) {
+    if (error instanceof Error) {
+        return {
+            errorName: error.name,
+            errorMessage: error.message,
+            errorStack: error.stack
+        };
+    }
+    return { errorMessage: String(error) };
+}
+
+export const logger = pino({
+    level: process.env.LOG_LEVEL ?? "info",
+    base: { service: "oracle-updater" }
+});
