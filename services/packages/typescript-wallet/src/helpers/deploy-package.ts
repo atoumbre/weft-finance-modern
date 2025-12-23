@@ -6,6 +6,7 @@ export function deployPackage({
   rpdBuffer,
   lockFee,
 }: {
+
   wasmBuffer: Buffer
   rpdBuffer: Buffer
   lockFee: number

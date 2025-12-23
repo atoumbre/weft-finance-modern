@@ -10,5 +10,4 @@ export function exec(address: string) {
     .mapErr((err: any) => walletLogger.error(JSON.stringify(err, null, 2)))
 }
 
-// eslint-disable-next-line node/prefer-global/process
 exec(process.argv[2])

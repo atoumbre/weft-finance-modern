@@ -1,0 +1,17 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "caviarnine",
+    "solana",
+    "xusdc"
+  ],
+  "patterns": [
+    {
+      "name": "radix-resource-addresses",
+      "pattern": "resource_rdx1[a-z0-9]+",
+      "description": "Radix resource addresses"
+    }
+  ],
+  "ignoreRegExpList": ["radix-resource-addresses"]
+}

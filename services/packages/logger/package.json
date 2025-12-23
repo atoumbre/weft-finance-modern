@@ -1,0 +1,13 @@
+{
+  "name": "comon-utils",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "dependencies": {
+    "pino": "^9.0.0",
+    "tslog": "^4.10.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "typescript": "^5.0.0"
+  }
+}
