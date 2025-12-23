@@ -1,11 +1,11 @@
-import type { ILogger } from 'comon-utils'
+import type { ILogger } from 'common-utils'
 import type Decimal from 'decimal.js'
 import process from 'node:process'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { DeleteMessageCommand, ReceiveMessageCommand, SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs'
 import { GatewayApiClient } from '@radixdlt/babylon-gateway-api-sdk'
 import { WeftLedgerSateFetcher } from '@weft-finance/ledger-state'
-import { createLogger } from 'comon-utils'
+import { createLogger } from 'common-utils'
 
 const logger = createLogger({ service: 'indexer' })
 

@@ -1,4 +1,4 @@
-import type { ILogger } from 'comon-utils'
+import type { ILogger } from 'common-utils'
 
 export type { ILogger }
 

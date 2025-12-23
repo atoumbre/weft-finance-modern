@@ -10,7 +10,9 @@
   // Dictionaries "Spanish", "ruby", and "corp-term" will always be checked.
   // Including "Spanish" in the list of dictionaries means both Spanish and English
   // words will be considered correct.
-  "dictionaries": ["fr-FR"],
+  "dictionaries": [
+    "fr-FR"
+  ],
   "ignorePaths": [
     "./**/node_modules/**",
     "./**/tests/**",
@@ -24,27 +26,59 @@
     "./**/pnpm-lock.yaml",
     "./**/pnpm-workspace.yaml"
   ],
+  "patterns": [
+    {
+      "name": "radix-resource-addresses",
+      "pattern": "resource_rdx1[a-z0-9]+",
+      "description": "Radix resource addresses"
+    }
+  ],
+  "ignoreRegExpList": [
+    "radix-resource-addresses"
+  ],
   // words - list of words to be always considered correct
   "words": [
+    "antfu",
+    "appautoscaling",
+    "astrl",
+    "astrolescent",
     "atoumbre",
+    "awslogs",
+    "awsvpc",
+    "blake",
+    "blakejs",
+    "buildx",
+    "caviarnine",
     "cdps",
+    "coingecko",
     "cooldown",
+    "corepack",
+    "defiplaza",
+    "ethereum",
+    "fargate",
+    "floop",
     "github",
+    "hdkey",
+    "hermes",
+    "hostnames",
+    "jsonencode",
     "mainnet",
+    "neverthrow",
+    "ociswap",
     "OIDC",
+    "outfile",
+    "pyth",
     "radixdlt",
+    "redrive",
+    "sbor",
+    "scrypto",
+    "solana",
     "stokenet",
     "tfstate",
     "tfvars",
-    "outfile",
-    "fargate",
-    "jsonencode",
-    "appautoscaling",
-    "awslogs",
-    "corepack",
-    "awsvpc",
-    "redrive",
-    "hostnames",
-    "buildx"
+    "tslog",
+    "tsup",
+    "usdt",
+    "xusdc"
   ]
 }

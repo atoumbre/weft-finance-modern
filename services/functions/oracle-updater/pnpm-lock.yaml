@@ -8,7 +8,7 @@ importers:
 
   .:
     dependencies:
-      'comon-utils':
+      'common-utils':
         specifier: workspace:*
         version: link:../../packages/logger
       pino:

@@ -1,5 +1,5 @@
 import type { ILogger, PluginFetchOptions, PriceCurrency, PriceFeedPlugin, PriceFeedResult } from '../plugin-interface'
-import { createLogger } from 'comon-utils'
+import { createLogger } from 'common-utils'
 import { fetchJson, isRecord } from '../utils'
 
 const globalLogger = createLogger({ service: 'oracle-updater' })

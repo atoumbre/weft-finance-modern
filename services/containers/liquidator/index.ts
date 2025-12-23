@@ -1,7 +1,7 @@
-import type { ILogger } from 'comon-utils'
+import type { ILogger } from 'common-utils'
 import { DeleteMessageCommand, ReceiveMessageCommand, SQSClient } from '@aws-sdk/client-sqs'
 import { LENDING_MARKET_COMPONENT } from '@weft-finance/ledger-state'
-import { createLogger } from 'comon-utils'
+import { createLogger } from 'common-utils'
 
 const logger = createLogger({ service: 'liquidator' })
 

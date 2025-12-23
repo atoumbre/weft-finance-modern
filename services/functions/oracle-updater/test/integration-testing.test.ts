@@ -1,7 +1,7 @@
 /// <reference types="bun-types" />
 
 import { describe, expect, it } from 'bun:test'
-import { createLogger } from 'comon-utils'
+import { createLogger } from 'common-utils'
 import { handler } from '../src'
 import { AstrolescentPlugin } from '../src/plugins/astrolescent'
 import { CaviarNinePlugin } from '../src/plugins/caviarnine'

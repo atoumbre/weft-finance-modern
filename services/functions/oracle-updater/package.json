@@ -9,7 +9,7 @@
     "test": "pnpm run build && bun test"
   },
   "dependencies": {
-    "comon-utils": "workspace:*",
+    "common-utils": "workspace:*",
     "pino": "^9.0.0"
   },
   "devDependencies": {

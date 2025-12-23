@@ -11,7 +11,7 @@
     "@aws-sdk/client-sqs": "^3.450.0",
     "@radixdlt/babylon-gateway-api-sdk": "^1.0.0",
     "@weft-finance/ledger-state": "^0.0.16",
-    "comon-utils": "workspace:*",
+    "common-utils": "workspace:*",
     "pino": "^9.0.0"
   },
   "devDependencies": {
