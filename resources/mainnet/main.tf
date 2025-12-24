@@ -29,6 +29,8 @@ module "mainnet_backend" {
   indexer_image_tag    = ""
   liquidator_image_tag = ""
 
+  log_level = "info"
+
   # VPC Configs
   vpc_cidr_block      = "10.0.0.0/16"
   public_subnet_count = 2

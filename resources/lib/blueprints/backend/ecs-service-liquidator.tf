@@ -95,6 +95,7 @@ module "liquidator_service" {
   environment = [
     { name = "LIQUIDATION_QUEUE_URL", value = module.indexer_service.queues["liquidation"].id },
     { name = "RADIX_GATEWAY_URL", value = var.radix_gateway_url },
+    { name = "LOG_LEVEL", value = var.log_level }
   ]
   sqs_permissions = [
     {

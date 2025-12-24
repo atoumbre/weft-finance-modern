@@ -34,6 +34,7 @@ module "dispatcher" {
     INDEXER_QUEUE_URL  = module.indexer_service.queues["main"].id
     INDEXER_BATCH_SIZE = var.indexer_batch_size
     RADIX_GATEWAY_URL  = var.radix_gateway_url
+    LOG_LEVEL          = var.log_level
   }
   extra_iam_policy_statements = [
     {

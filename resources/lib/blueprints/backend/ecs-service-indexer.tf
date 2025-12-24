@@ -106,7 +106,8 @@ module "indexer_service" {
     { name = "QUEUE_URL", value = module.indexer_service.queues["main"].id },
     { name = "LIQUIDATION_QUEUE_URL", value = module.indexer_service.queues["liquidation"].id },
     { name = "BUCKET_NAME", value = module.cdp_data_bucket.bucket_id },
-    { name = "RADIX_GATEWAY_URL", value = var.radix_gateway_url }
+    { name = "RADIX_GATEWAY_URL", value = var.radix_gateway_url },
+    { name = "LOG_LEVEL", value = var.log_level }
   ]
 
   extra_task_policy_statements = [

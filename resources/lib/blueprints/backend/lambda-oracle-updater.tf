@@ -47,5 +47,6 @@ module "oracle_updater" {
     BADGE_RESOURCE_ADDRESS   = var.oracle_updater_badge_resource_address
     ORACLE_COMPONENT_ADDRESS = var.oracle_updater_component_address
     BADGE_NFT_ID             = var.oracle_updater_badge_nft_id
+    LOG_LEVEL                = var.log_level
   }
 }

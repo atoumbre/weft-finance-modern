@@ -17,3 +17,9 @@ variable "log_retention_days" {
   description = "CloudWatch log retention in days"
   type        = number
 }
+
+variable "log_level" {
+  description = "Log level for all services (debug, info, warn, error)"
+  type        = string
+  default     = "info"
+}
