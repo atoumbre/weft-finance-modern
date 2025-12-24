@@ -23,8 +23,8 @@ WORKDIR /app
 
 # Copy the standalone production bundle
 COPY --from=builder /app/deployed ./
+
 # Copy built files (which are gitignored and thus skipped by pnpm deploy)
-# tsup bundles common-utils into this file, so no need to copy it separately
 COPY --from=builder /app/containers/indexer/dist ./dist
 
 CMD ["node", "dist/index.js"]
