@@ -186,7 +186,7 @@ jobs:
     uses: ./.github/workflows/__deploy-service.yml
     secrets: inherit
     with:
-      service_name: indexer
+      service_name: weft-${{ needs.set-env.outputs.name }}-indexer
       environment: ${{ needs.set-env.outputs.name }}
 
   deploy-liquidator:
@@ -202,7 +202,7 @@ jobs:
     uses: ./.github/workflows/__deploy-service.yml
     secrets: inherit
     with:
-      service_name: liquidator
+      service_name: weft-${{ needs.set-env.outputs.name }}-liquidator
       environment: ${{ needs.set-env.outputs.name }}
 
   deploy-dispatcher:

@@ -96,7 +96,7 @@ module "observability_mainnet" {
   keep_stream                             = "false"
   extra_labels                            = "app,weft,env,mainnet"
   batch_size                              = "8192"
-  include_namespaces                      = ["AWS/ECS"]
+  include_namespaces                      = ["AWS/ECS", "AWS/EC2", "AWS/Lambda"]
   log_group_names = [
     "/aws/lambda/weft-mainnet-dispatcher",
     "/aws/ecs/weft-mainnet-indexer",
