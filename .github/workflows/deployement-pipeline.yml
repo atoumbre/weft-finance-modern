@@ -207,8 +207,7 @@ jobs:
       environment: ${{ needs.set-env.outputs.name }}
 
   deploy-dispatcher:
-    needs: [filter, infrastructure-ready, set-env]
-    if: needs.filter.outputs.dispatcher == 'true'
+    needs: [infrastructure-ready, set-env]
     uses: ./.github/workflows/__deploy-lambda.yml
     secrets: inherit
     with:
@@ -218,8 +217,7 @@ jobs:
       environment: ${{ needs.set-env.outputs.name }}
 
   deploy-oracle-updater:
-    needs: [filter, infrastructure-ready, set-env]
-    if: needs.filter.outputs.oracle-updater == 'true'
+    needs: [infrastructure-ready, set-env]
     uses: ./.github/workflows/__deploy-lambda.yml
     secrets: inherit
     with:
