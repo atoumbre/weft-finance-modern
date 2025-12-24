@@ -1,5 +1,3 @@
-
-
 import type { ILogger } from 'common-utils'
 import { randomUUID } from 'node:crypto'
 import { SendMessageBatchCommand, SQSClient } from '@aws-sdk/client-sqs'

@@ -17,7 +17,6 @@ const logger = createLogger({ service: 'oracle-updater' })
 
 /* cSpell:disable */
 
-
 interface PriceQuote {
   symbol: string
   resourceAddress: string

@@ -22,7 +22,7 @@ importers:
         version: 0.0.16
       common-utils:
         specifier: workspace:*
-        version: link:../../packages/logger
+        version: link:../../packages/common-utils
       pino:
         specifier: ^10.1.0
         version: 10.1.0
