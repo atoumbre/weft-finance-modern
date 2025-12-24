@@ -4,6 +4,9 @@ FROM node:22-alpine AS builder
 RUN corepack enable
 WORKDIR /app
 
+# Disable pnpm trust policy to prevent ERR_PNPM_TRUST_DOWNGRADE
+RUN pnpm config set trust-policy none
+
 # Copy the entire services directory (build context is 'services')
 COPY . .
 
