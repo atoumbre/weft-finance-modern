@@ -12,9 +12,6 @@ permissions:
   contents: read
 
 jobs:
-  # typo-check:
-  #   uses: ./.github/workflows/_typo-check.yml
-
   typo-check:
     uses: ./.github/workflows/_typo-check.yml
     permissions:

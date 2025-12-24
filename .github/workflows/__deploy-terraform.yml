@@ -66,8 +66,7 @@ jobs:
         working-directory: ${{ inputs.resource-path }}
         run: |
           terraform init -reconfigure \
-            -backend-config="bucket=weft-terraform-state-${{ steps.account.outputs.id }}" \
-            -backend-config="dynamodb_table=weft-terraform-state-locks" \
+            -backend-config="bucket=admin-terraform-state-${{ steps.account.outputs.id }}" \
             -backend-config="key=${{ inputs.terraform-key }}" \
             -backend-config="region=${{ inputs.aws-region }}"
 

@@ -20,6 +20,10 @@ env:
   BUN_VERSION: "1.2.13"
   AWS_REGION: us-east-1
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # Validation jobs
   typo-check:
@@ -86,6 +90,7 @@ jobs:
       dispatcher: ${{ steps.filter.outputs.dispatcher }}
       indexer: ${{ steps.filter.outputs.indexer }}
       liquidator: ${{ steps.filter.outputs.liquidator }}
+      oracle-updater: ${{ steps.filter.outputs.oracle-updater }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -98,38 +103,50 @@ jobs:
               - "services/containers/indexer/**"
             liquidator:
               - "services/containers/liquidator/**"
+            oracle-updater:
+              - "services/functions/oracle-updater/**"
 
   # Deploy infrastructure (always runs, Terraform handles diffs)
-  deploy-admin:
+  deploy-shared:
     needs: [set-env]
+    concurrency:
+      group: shared-deployment
+      cancel-in-progress: false
     uses: ./.github/workflows/__deploy-terraform.yml
     secrets: inherit
     with:
-      resource-name: admin
-      resource-path: resources/admin
-      terraform-key: admin.tfstate
+      resource-name: shared
+      resource-path: resources/shared
+      terraform-key: shared.tfstate
       terraform-vars: ""
 
-  deploy-backend:
+  deploy-mainnet:
     needs: [set-env]
+    if: needs.set-env.outputs.name == 'mainnet'
+    concurrency:
+      group: mainnet-deployment
+      cancel-in-progress: false
     uses: ./.github/workflows/__deploy-terraform.yml
     secrets: inherit
     with:
-      resource-name: backend
-      resource-path: resources/backend
-      terraform-key: weft-${{ needs.set-env.outputs.name }}.tfstate
-      terraform-vars: ${{ needs.set-env.outputs.name }}.tfvars
-      environment: ${{ needs.set-env.outputs.name }}
+      resource-name: mainnet
+      resource-path: resources/mainnet
+      terraform-key: mainnet.tfstate
+      terraform-vars: ""
 
-  deploy-observability:
+  deploy-stokenet:
     needs: [set-env]
+    if: needs.set-env.outputs.name == 'stokenet'
+    concurrency:
+      group: stokenet-deployment
+      cancel-in-progress: false
     uses: ./.github/workflows/__deploy-terraform.yml
     secrets: inherit
     with:
-      resource-name: observability
-      resource-path: resources/observability
-      terraform-key: observability.tfstate
-      terraform-vars: variables.tfvars
+      resource-name: stokenet
+      resource-path: resources/stokenet
+      terraform-key: stokenet.tfstate
+      terraform-vars: ""
 
   # Build container images if code changed
   build-indexer:
@@ -156,17 +173,24 @@ jobs:
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
+  # Gate for service deployments - ensures infrastructure is ready
+  infrastructure-ready:
+    needs: [deploy-shared, deploy-mainnet, deploy-stokenet, set-env]
+    runs-on: ubuntu-latest
+    if: |
+      always() &&
+      needs.deploy-shared.result == 'success' &&
+      (
+        (needs.set-env.outputs.name == 'mainnet' && needs.deploy-mainnet.result == 'success') ||
+        (needs.set-env.outputs.name == 'stokenet' && needs.deploy-stokenet.result == 'success')
+      )
+    steps:
+      - run: echo "Infrastructure is ready for ${{ needs.set-env.outputs.name }}"
+
   # Deploy services after infrastructure is ready
   deploy-indexer:
-    needs:
-      [
-        build-indexer,
-        deploy-admin,
-        deploy-backend,
-        deploy-observability,
-        set-env,
-      ]
-    if: ${{ always() && needs.build-indexer.result == 'success' }}
+    needs: [build-indexer, infrastructure-ready, set-env]
+    if: needs.build-indexer.result == 'success'
     uses: ./.github/workflows/__deploy-service.yml
     secrets: inherit
     with:
@@ -174,15 +198,8 @@ jobs:
       environment: ${{ needs.set-env.outputs.name }}
 
   deploy-liquidator:
-    needs:
-      [
-        build-liquidator,
-        deploy-admin,
-        deploy-backend,
-        deploy-observability,
-        set-env,
-      ]
-    if: ${{ always() && needs.build-liquidator.result == 'success' }}
+    needs: [build-liquidator, infrastructure-ready, set-env]
+    if: needs.build-liquidator.result == 'success'
     uses: ./.github/workflows/__deploy-service.yml
     secrets: inherit
     with:
@@ -190,12 +207,23 @@ jobs:
       environment: ${{ needs.set-env.outputs.name }}
 
   deploy-dispatcher:
-    needs: [filter, deploy-admin, deploy-backend, deploy-observability, set-env]
-    if: ${{ always() && needs.filter.outputs.dispatcher == 'true' }}
+    needs: [filter, infrastructure-ready, set-env]
+    if: needs.filter.outputs.dispatcher == 'true'
     uses: ./.github/workflows/__deploy-lambda.yml
     secrets: inherit
     with:
       service-name: dispatcher
       service-path: services/functions/dispatcher
       function-name: weft-${{ needs.set-env.outputs.name }}-dispatcher
+      environment: ${{ needs.set-env.outputs.name }}
+
+  deploy-oracle-updater:
+    needs: [filter, infrastructure-ready, set-env]
+    if: needs.filter.outputs.oracle-updater == 'true'
+    uses: ./.github/workflows/__deploy-lambda.yml
+    secrets: inherit
+    with:
+      service-name: oracle-updater
+      service-path: services/functions/oracle-updater
+      function-name: weft-${{ needs.set-env.outputs.name }}-oracle-updater
       environment: ${{ needs.set-env.outputs.name }}
