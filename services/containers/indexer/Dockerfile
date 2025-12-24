@@ -25,5 +25,7 @@ WORKDIR /app
 COPY --from=builder /app/deployed ./
 # Copy built files (which are gitignored and thus skipped by pnpm deploy)
 COPY --from=builder /app/containers/indexer/dist ./dist
+# Copy common-utils dist (workspace dependency, also gitignored)
+COPY --from=builder /app/packages/common-utils/dist ./node_modules/common-utils/dist
 
 CMD ["node", "dist/index.js"]
