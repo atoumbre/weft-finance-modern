@@ -97,7 +97,7 @@ module "observability_stokenet" {
   keep_stream                             = "false"
   extra_labels                            = "app,weft,env,stokenet"
   batch_size                              = "8192"
-  include_namespaces                      = ["AWS/ECS"]
+  include_namespaces                      = ["AWS/ECS", "AWS/SQS", "AWS/EC2", "AWS/Lambda"]
   log_group_names = [
     "/aws/lambda/weft-stokenet-dispatcher",
     "/aws/ecs/weft-stokenet-indexer",
