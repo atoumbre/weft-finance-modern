@@ -2,61 +2,52 @@ name: Services Testing
 
 on:
   workflow_call:
+    inputs:
+      dispatcher:
+        required: false
+        type: string
+        default: "false"
+      indexer:
+        required: false
+        type: string
+        default: "false"
+      liquidator:
+        required: false
+        type: string
+        default: "false"
+      oracle_updater:
+        required: false
+        type: string
+        default: "false"
 
 permissions:
   contents: read
   pull-requests: read
 
 jobs:
-  filter:
-    runs-on: ubuntu-latest
-    outputs:
-      dispatcher: ${{ steps.filter.outputs.dispatcher }}
-      indexer: ${{ steps.filter.outputs.indexer }}
-      liquidator: ${{ steps.filter.outputs.liquidator }}
-      oracle_updater: ${{ steps.filter.outputs.oracle_updater }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            dispatcher:
-              - "services/functions/dispatcher/**"
-            indexer:
-              - "services/containers/indexer/**"
-            liquidator:
-              - "services/containers/liquidator/**"
-            oracle_updater:
-              - "services/functions/oracle-updater/**"
-
   test-dispatcher:
-    needs: [filter]
-    if: needs.filter.outputs.dispatcher == 'true'
+    if: inputs.dispatcher == 'true'
     uses: ./.github/workflows/__test-node-package.yml
     with:
       service-path: services/functions/dispatcher
       service-name: dispatcher
 
   test-indexer:
-    needs: [filter]
-    if: needs.filter.outputs.indexer == 'true'
+    if: inputs.indexer == 'true'
     uses: ./.github/workflows/__test-node-package.yml
     with:
       service-path: services/containers/indexer
       service-name: indexer
 
   test-liquidator:
-    needs: [filter]
-    if: needs.filter.outputs.liquidator == 'true'
+    if: inputs.liquidator == 'true'
     uses: ./.github/workflows/__test-node-package.yml
     with:
       service-path: services/containers/liquidator
       service-name: liquidator
 
   test-oracle-updater:
-    needs: [filter]
-    if: needs.filter.outputs.oracle_updater == 'true'
+    if: inputs.oracle_updater == 'true'
     uses: ./.github/workflows/__test-node-package.yml
     with:
       service-path: services/functions/oracle-updater

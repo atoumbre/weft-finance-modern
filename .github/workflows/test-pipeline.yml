@@ -12,19 +12,41 @@ permissions:
   contents: read
 
 jobs:
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      dispatcher: ${{ steps.filter.outputs.dispatcher }}
+      indexer: ${{ steps.filter.outputs.indexer }}
+      liquidator: ${{ steps.filter.outputs.liquidator }}
+      oracle_updater: ${{ steps.filter.outputs.oracle_updater }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: .github/filters.yml
+
   typo-check:
+    needs: [filter]
     uses: ./.github/workflows/_typo-check.yml
     permissions:
       contents: read
       pull-requests: read
 
   tests-services:
+    needs: [filter]
     uses: ./.github/workflows/_tests-services.yml
+    with:
+      dispatcher: ${{ needs.filter.outputs.dispatcher }}
+      indexer: ${{ needs.filter.outputs.indexer }}
+      liquidator: ${{ needs.filter.outputs.liquidator }}
+      oracle_updater: ${{ needs.filter.outputs.oracle_updater }}
     permissions:
       contents: read
       pull-requests: read
 
   validate-resources:
+    needs: [filter]
     uses: ./.github/workflows/_validate-resources.yml
     permissions:
       contents: read

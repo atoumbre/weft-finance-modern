@@ -1,0 +1,19 @@
+dispatcher:
+  - "services/functions/dispatcher/**"
+  - "services/packages/**"
+indexer:
+  - "services/containers/indexer/**"
+  - "services/packages/**"
+liquidator:
+  - "services/containers/liquidator/**"
+  - "services/packages/**"
+oracle_updater:
+  - "services/functions/oracle-updater/**"
+  - "services/packages/**"
+
+infra_shared:
+  - "resources/shared/**"
+infra_mainnet:
+  - "resources/mainnet/**"
+infra_stokenet:
+  - "resources/stokenet/**"
