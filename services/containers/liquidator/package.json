@@ -2,7 +2,7 @@
   "name": "liquidator",
   "version": "1.0.0",
   "scripts": {
-    "build": "tsc",
+    "build": "esbuild index.ts --bundle --platform=node --target=node22 --outfile=dist/index.js '--external:@aws-sdk/*' '--external:@radixdlt/*' '--external:@weft-finance/*' --external:pino",
     "test": "pnpm run build && bun test"
   },
   "dependencies": {
@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "esbuild": "^0.24.0",
     "typescript": "^5.0.0"
   }
 }
