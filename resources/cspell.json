@@ -61,6 +61,7 @@
     "tfstate",
     "tfvars",
     "toset",
-    "zipfile"
+    "zipfile",
+    "Collateralized"
   ]
 }

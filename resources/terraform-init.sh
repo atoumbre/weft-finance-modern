@@ -12,7 +12,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-TF_DIR="${PROJECT_ROOT}/terraform/${TF_TARGET}"
+TF_DIR="${PROJECT_ROOT}/resources/${TF_TARGET}"
 
 if [ ! -d "$TF_DIR" ]; then
   echo "Unsupported target: $TF_TARGET" >&2
@@ -42,6 +42,5 @@ fi
 
 terraform -chdir="$TF_DIR" init -reconfigure \
   -backend-config="bucket=weft-terraform-state-${ACCOUNT_ID}" \
-  -backend-config="dynamodb_table=weft-terraform-state-locks" \
   -backend-config="key=${state_key}" \
-  -backend-config="region=${AWS_REGION}"
+  -backend-config="region=${AWS_REGION}" 

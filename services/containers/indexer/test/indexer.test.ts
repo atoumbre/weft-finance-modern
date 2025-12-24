@@ -1,8 +1,9 @@
+/// <reference types="bun-types" />
+
 import type { CollateralizeDebtPositionData } from '@weft-finance/ledger-state'
 import type { Fetcher } from '../src/index'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { DeleteMessageCommand, ReceiveMessageCommand, SendMessageCommand } from '@aws-sdk/client-sqs'
-/// <reference types="bun-types" />
 import { expect, test } from 'bun:test'
 import Decimal from 'decimal.js'
 import { checkRisk, createIndexerWorker, createMessageProcessor } from '../src/index'
@@ -14,8 +15,6 @@ const silentLogger = {
   debug: () => undefined,
   child: () => silentLogger,
 }
-
-//
 
 test('checkRisk returns true when liquidationLtv >= 1', () => {
   expect(checkRisk({ liquidationLtv: new Decimal(1) })).toBe(true)
