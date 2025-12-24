@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "packageManager": "pnpm@10.26.0+sha512.3b3f6c725ebe712506c0ab1ad4133cf86b1f4b687effce62a9b38b4d72e3954242e643190fc51fa1642949c735f403debd44f5cb0edd657abe63a8b6a7e1e402",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --outfile=dist/index.js '--external:@aws-sdk/*' '--external:@radixdlt/*' '--external:@weft-finance/*' --external:decimal.js --external:pino",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --outfile=dist/index.js '--alias:common-utils=../../packages/common-utils/src/index.ts' '--external:@aws-sdk/*' '--external:@radixdlt/*' '--external:@weft-finance/*' --external:decimal.js --external:pino",
     "test": "pnpm run build && bun test"
   },
   "dependencies": {
