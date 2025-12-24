@@ -23,6 +23,9 @@ importers:
       '@weft-finance/ledger-state':
         specifier: ^0.0.16
         version: 0.0.16
+      'common-utils':
+        specifier: workspace:*
+        version: link:../../packages/logger
       decimal.js:
         specifier: ^10.6.0
         version: 10.6.0

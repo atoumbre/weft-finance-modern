@@ -1,0 +1,84 @@
+{
+  // Version of the setting file.  Always 0.2
+  "version": "0.2",
+  // language - current active spelling language
+  "language": "en,fr,fr-FR",
+  // flagWords - list of words to be always considered incorrect
+  // This is useful for offensive words and common spelling errors.
+  // For example "hte" should be "the"
+  "flagWords": [],
+  // Dictionaries "Spanish", "ruby", and "corp-term" will always be checked.
+  // Including "Spanish" in the list of dictionaries means both Spanish and English
+  // words will be considered correct.
+  "dictionaries": [
+    "fr-FR"
+  ],
+  "ignorePaths": [
+    "./**/node_modules/**",
+    "./**/tests/**",
+    "./**/dist/**",
+    "./**/example/**",
+    "./**/*.wasm",
+    "./**/*.tfvars",
+    "./**/*.tfstate",
+    "./**/*.tfstate.backup",
+    "./**/*.zip",
+    "./**/pnpm-lock.yaml",
+    "./**/pnpm-workspace.yaml"
+  ],
+  "patterns": [
+    {
+      "name": "radix-resource-addresses",
+      "pattern": "resource_rdx1[a-z0-9]+",
+      "description": "Radix resource addresses"
+    }
+  ],
+  "ignoreRegExpList": [
+    "radix-resource-addresses"
+  ],
+  // words - list of words to be always considered correct
+  "words": [
+    "antfu",
+    "appautoscaling",
+    "astrl",
+    "astrolescent",
+    "atoumbre",
+    "awslogs",
+    "awsvpc",
+    "blake",
+    "blakejs",
+    "buildx",
+    "caviarnine",
+    "cdps",
+    "coingecko",
+    "cooldown",
+    "corepack",
+    "defiplaza",
+    "ethereum",
+    "fargate",
+    "floop",
+    "github",
+    "hdkey",
+    "hermes",
+    "hostnames",
+    "jsonencode",
+    "mainnet",
+    "neverthrow",
+    "ociswap",
+    "OIDC",
+    "outfile",
+    "pyth",
+    "radixdlt",
+    "redrive",
+    "sbor",
+    "scrypto",
+    "solana",
+    "stokenet",
+    "tfstate",
+    "tfvars",
+    "tslog",
+    "tsup",
+    "usdt",
+    "xusdc"
+  ]
+}

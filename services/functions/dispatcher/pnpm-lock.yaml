@@ -20,6 +20,9 @@ importers:
       '@weft-finance/ledger-state':
         specifier: ^0.0.16
         version: 0.0.16
+      'common-utils':
+        specifier: workspace:*
+        version: link:../../packages/logger
       pino:
         specifier: ^9.0.0
         version: 9.14.0

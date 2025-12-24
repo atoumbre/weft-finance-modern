@@ -1,6 +1,10 @@
+shellEmulator: true
+
+trustPolicy: no-downgrade
+
 packages:
-  - "containers/indexer"
-  - "containers/liquidator"
-  - "functions/dispatcher"
-  - "functions/oracle-updater"
-  - "packages/typescript-wallet"
+  - containers/indexer
+  - containers/liquidator
+  - functions/dispatcher
+  - functions/oracle-updater
+  - 'packages/*'

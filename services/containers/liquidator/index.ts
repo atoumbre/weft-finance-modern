@@ -1,188 +1,127 @@
+import type { ILogger } from 'common-utils'
+import { DeleteMessageCommand, ReceiveMessageCommand, SQSClient } from '@aws-sdk/client-sqs'
+import { LENDING_MARKET_COMPONENT } from '@weft-finance/ledger-state'
+import { createLogger } from 'common-utils'
 
-import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } from "@aws-sdk/client-sqs";
-import { GatewayApiClient } from "@radixdlt/babylon-gateway-api-sdk";
-import { LENDING_MARKET_COMPONENT } from "@weft-finance/ledger-state";
-import pino from "pino";
+const logger = createLogger({ service: 'liquidator' })
 
-//
+const sqs = new SQSClient({})
 
-const logger = pino({
-    level: process.env.LOG_LEVEL ?? "info",
-    base: { service: "liquidator" }
-});
+const QUEUE_URL = process.env.LIQUIDATION_QUEUE_URL!
 
-const sqs = new SQSClient({});
-const gatewayApi = GatewayApiClient.initialize({
-    basePath: process.env.RADIX_GATEWAY_URL,
-    applicationName: "Weft Liquidator"
-});
+async function liquidateCdp(cdpId: string, localLogger: ILogger) {
+  localLogger.info({ event: 'liquidator.cdp.start', cdpId })
 
-//
-//
-
-const QUEUE_URL = process.env.LIQUIDATION_QUEUE_URL!;
-
-type LogLevel = "info" | "error";
-
-function toErrorFields(error: unknown) {
-    if (error instanceof Error) {
-        return {
-            errorName: error.name,
-            errorMessage: error.message,
-            errorStack: error.stack
-        };
-    }
-
-    return { errorMessage: String(error) };
-}
-
-function logEvent(level: LogLevel, event: string, fields: Record<string, unknown>) {
-    const payload = {
-        event,
-        timestamp: new Date().toISOString(),
-        ...fields
-    };
-
-    if (level === "error") {
-        logger.error(payload, event);
-        return;
-    }
-    logger.info(payload, event);
-}
-
-
-
-async function liquidateCdp(cdpId: string, context: { runId?: string; messageId?: string }) {
-    logEvent("info", "liquidator.cdp.start", {
-        ...context,
-        cdpId
-    });
-
-    const manifest = `
+  const manifest = `
         CALL_METHOD Address("${LENDING_MARKET_COMPONENT}") "liquidate" NonFungibleLocalId("${cdpId}");
-`;
+`
 
-    // In a real implementation:
-    // 1. Convert manifest to Intent
-    // 2. Sign Intent with Private Key (from SEED_PHRASE)
-    // 3. Submit Transaction
+  // In a real implementation:
+  // 1. Convert manifest to Intent
+  // 2. Sign Intent with Private Key (from SEED_PHRASE)
+  // 3. Submit Transaction
 
-    // Here we just preview it to verify it *would* work or just log it.
-    // For the sake of the infrastructure demo, we'll assume success.
+  // Here we just preview it to verify it *would* work or just log it.
+  // For the sake of the infrastructure demo, we'll assume success.
 
-    logEvent("info", "liquidator.cdp.mock_prepared", {
-        ...context,
-        cdpId,
-        manifestLength: manifest.length
-    });
-    logEvent("info", "liquidator.cdp.mock_submitted", {
-        ...context,
-        cdpId
-    });
+  localLogger.info({ event: 'liquidator.cdp.mock_prepared', cdpId, manifestLength: manifest.length })
+  localLogger.info({ event: 'liquidator.cdp.mock_submitted', cdpId })
 
-    return true;
+  return true
 }
 
 async function processMessage(message: any) {
-    if (!message.Body) return;
+  const messageId = typeof message?.MessageId === 'string' ? message.MessageId : undefined
+  if (!message.Body)
+    return
 
-    let body: unknown;
+  let body: any
+  try {
+    body = JSON.parse(message.Body)
+  }
+  catch (e) {
+    logger.error({
+      event: 'liquidator.message.invalid_json',
+      messageId,
+      bodyLength: typeof message.Body === 'string' ? message.Body.length : undefined,
+      err: e,
+    })
+    return
+  }
+
+  const runId = typeof body.runId === 'string' ? body.runId : undefined
+  const rawIds = Array.isArray(body.cdpIds) ? body.cdpIds : (body.cdpId ? [body.cdpId] : [])
+  const ids = rawIds.filter((id: any): id is string => typeof id === 'string' && id.length > 0)
+
+  // Create a child logger for this request context
+  const localLogger = logger.child({ runId, messageId })
+
+  if (ids.length === 0)
+    return
+  if (ids.length !== rawIds.length) {
+    localLogger.warn({
+      event: 'liquidator.message.invalid_cdp_ids',
+      invalidCount: rawIds.length - ids.length,
+    })
+  }
+
+  localLogger.info({ event: 'liquidator.message.received', cdpCount: ids.length })
+
+  const failures: string[] = []
+  for (const id of ids) {
     try {
-        body = JSON.parse(message.Body);
-    } catch (e) {
-        logEvent("error", "liquidator.message.invalid_json", {
-            messageId: message?.MessageId,
-            bodyLength: typeof message.Body === "string" ? message.Body.length : undefined,
-            ...toErrorFields(e)
-        });
-        return;
+      await liquidateCdp(id, localLogger)
     }
-
-    const rawRunId = (body as { runId?: unknown }).runId;
-    const runId = typeof rawRunId === "string" ? rawRunId : undefined;
-    const messageId = typeof message?.MessageId === "string" ? message.MessageId : undefined;
-    const rawIds = Array.isArray((body as { cdpIds?: unknown }).cdpIds)
-        ? (body as { cdpIds: unknown[] }).cdpIds
-        : [(body as { cdpId?: unknown }).cdpId];
-    const ids = rawIds.filter((id): id is string => typeof id === "string" && id.length > 0);
-
-    if (ids.length === 0) return;
-    if (ids.length !== rawIds.length) {
-        logEvent("error", "liquidator.message.invalid_cdp_ids", {
-            messageId,
-            runId,
-            invalidCount: rawIds.length - ids.length
-        });
+    catch (e) {
+      failures.push(id)
+      localLogger.error({
+        event: 'liquidator.cdp.failed',
+        cdpId: id,
+        err: e,
+      })
     }
+  }
 
-    logEvent("info", "liquidator.message.received", {
-        messageId,
-        runId,
-        cdpCount: ids.length
-    });
+  if (failures.length > 0) {
+    throw new Error(`Failed to liquidate ${failures.length} CDPs`)
+  }
 
-    const failures: string[] = [];
-    for (const id of ids) {
-        try {
-            await liquidateCdp(id, { runId, messageId });
-        } catch (e) {
-            failures.push(id);
-            logEvent("error", "liquidator.cdp.failed", {
-                messageId,
-                runId,
-                cdpId: id,
-                ...toErrorFields(e)
-            });
-        }
-    }
-
-    if (failures.length > 0) {
-        throw new Error(`Failed to liquidate ${failures.length} CDPs`);
-    }
-
-    logEvent("info", "liquidator.message.completed", {
-        messageId,
-        runId,
-        cdpCount: ids.length
-    });
+  localLogger.info({ event: 'liquidator.message.completed', cdpCount: ids.length })
 }
 
 async function main() {
-    logEvent("info", "liquidator.start", { queueUrl: QUEUE_URL });
+  logger.info({ event: 'liquidator.start', queueUrl: QUEUE_URL })
 
-    while (true) {
-        try {
-            const { Messages } = await sqs.send(new ReceiveMessageCommand({
-                QueueUrl: QUEUE_URL,
-                MaxNumberOfMessages: 1,
-                WaitTimeSeconds: 20
-            }));
+  while (true) {
+    try {
+      const { Messages } = await sqs.send(new ReceiveMessageCommand({
+        QueueUrl: QUEUE_URL,
+        MaxNumberOfMessages: 1,
+        WaitTimeSeconds: 20,
+      }))
 
-            if (Messages) {
-                for (const msg of Messages) {
-                    try {
-                        await processMessage(msg);
-                        // Only delete if successful
-                        await sqs.send(new DeleteMessageCommand({
-                            QueueUrl: QUEUE_URL,
-                            ReceiptHandle: msg.ReceiptHandle
-                        }));
-                        logEvent("info", "liquidator.message.deleted", {
-                            messageId: msg.MessageId
-                        });
-                    } catch (e) {
-                        logEvent("error", "liquidator.message.failed", {
-                            messageId: msg.MessageId,
-                            ...toErrorFields(e)
-                        });
-                    }
-                }
-            }
-        } catch (error) {
-            logEvent("error", "liquidator.loop.error", toErrorFields(error));
-            await new Promise(resolve => setTimeout(resolve, 5000));
+      if (Messages) {
+        for (const msg of Messages) {
+          try {
+            await processMessage(msg)
+            // Only delete if successful
+            await sqs.send(new DeleteMessageCommand({
+              QueueUrl: QUEUE_URL,
+              ReceiptHandle: msg.ReceiptHandle,
+            }))
+            logger.info({ event: 'liquidator.message.deleted', messageId: msg.MessageId })
+          }
+          catch (e) {
+            logger.error({ event: 'liquidator.message.failed', messageId: msg.MessageId, err: e })
+          }
         }
+      }
     }
+    catch (error) {
+      logger.error({ event: 'liquidator.loop.error', err: error })
+      await new Promise(resolve => setTimeout(resolve, 5000))
+    }
+  }
 }
 
-main();
+main()

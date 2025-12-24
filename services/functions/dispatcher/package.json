@@ -1,6 +1,7 @@
 {
-  "name": "weft-dispatcher",
+  "name": "indexer-dispatcher",
   "version": "1.0.0",
+  "packageManager": "pnpm@10.26.0+sha512.3b3f6c725ebe712506c0ab1ad4133cf86b1f4b687effce62a9b38b4d72e3954242e643190fc51fa1642949c735f403debd44f5cb0edd657abe63a8b6a7e1e402",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -12,6 +13,7 @@
     "@aws-sdk/client-sqs": "^3.954.0",
     "@radixdlt/babylon-gateway-api-sdk": "^1.10.1",
     "@weft-finance/ledger-state": "^0.0.16",
+    "common-utils": "workspace:*",
     "pino": "^9.0.0"
   },
   "devDependencies": {
@@ -20,6 +22,5 @@
     "bun-types": "^1.3.5",
     "esbuild": "^0.27.2",
     "typescript": "^5.9.3"
-  },
-  "packageManager": "pnpm@10.26.0+sha512.3b3f6c725ebe712506c0ab1ad4133cf86b1f4b687effce62a9b38b4d72e3954242e643190fc51fa1642949c735f403debd44f5cb0edd657abe63a8b6a7e1e402"
+  }
 }

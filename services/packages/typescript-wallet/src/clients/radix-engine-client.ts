@@ -1,4 +1,4 @@
-
+import type { RadixNetworkConfig } from '@radixdlt/babylon-gateway-api-sdk'
 import type {
   NotarizedTransaction,
   TransactionHeader,
@@ -21,7 +21,6 @@ import { walletLogger } from '../helpers/logger'
 import { mnemonicToKeyPair } from '../helpers/mnemonicToKeyPair'
 import { typedError } from '../helpers/typed-error'
 import { getGatewayClient } from './gateway-client'
-import { RadixNetworkConfig } from '@radixdlt/babylon-gateway-api-sdk'
 
 function getSignerKeys(mnemonic: string, derivationPath: string) {
   const { privateKey } = mnemonicToKeyPair(mnemonic, derivationPath).unwrapOr({

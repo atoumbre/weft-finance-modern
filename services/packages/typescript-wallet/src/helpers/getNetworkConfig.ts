@@ -1,4 +1,4 @@
-import { RadixNetworkConfig } from "@radixdlt/babylon-gateway-api-sdk"
+import { RadixNetworkConfig } from '@radixdlt/babylon-gateway-api-sdk'
 
 export function getNetworkConfig(networkName: keyof typeof RadixNetworkConfig) {
   const network = RadixNetworkConfig[networkName]

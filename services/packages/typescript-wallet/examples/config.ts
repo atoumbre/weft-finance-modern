@@ -1,5 +1,3 @@
-/* eslint-disable node/prefer-global/process */
-
 import { walletLogger } from '../src'
 import { getRadixEngineClient } from '../src/clients'
 import 'dotenv/config'
