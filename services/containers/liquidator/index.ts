@@ -3,6 +3,8 @@ import { DeleteMessageCommand, ReceiveMessageCommand, SQSClient } from '@aws-sdk
 import { LENDING_MARKET_COMPONENT } from '@weft-finance/ledger-state'
 import { createLogger } from 'common-utils'
 
+
+
 const logger = createLogger({ service: 'liquidator' })
 
 const sqs = new SQSClient({})
