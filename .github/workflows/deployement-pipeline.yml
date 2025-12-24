@@ -85,7 +85,8 @@ jobs:
   # Detect changes for conditional builds
   filter:
     runs-on: ubuntu-latest
-    needs: [services-precheck]
+    # Remove dependency on services-precheck to ensure change detection always runs
+    # needs: [services-precheck]
     outputs:
       dispatcher: ${{ steps.filter.outputs.dispatcher }}
       indexer: ${{ steps.filter.outputs.indexer }}
@@ -179,10 +180,10 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       always() &&
-      needs.deploy-shared.result == 'success' &&
+      (needs.deploy-shared.result == 'success' || needs.deploy-shared.result == 'skipped') &&
       (
-        (needs.set-env.outputs.name == 'mainnet' && needs.deploy-mainnet.result == 'success') ||
-        (needs.set-env.outputs.name == 'stokenet' && needs.deploy-stokenet.result == 'success')
+        (needs.set-env.outputs.name == 'mainnet' && (needs.deploy-mainnet.result == 'success' || needs.deploy-mainnet.result == 'skipped')) ||
+        (needs.set-env.outputs.name == 'stokenet' && (needs.deploy-stokenet.result == 'success' || needs.deploy-stokenet.result == 'skipped'))
       )
     steps:
       - run: echo "Infrastructure is ready for ${{ needs.set-env.outputs.name }}"
@@ -190,7 +191,10 @@ jobs:
   # Deploy services after infrastructure is ready
   deploy-indexer:
     needs: [build-indexer, infrastructure-ready, set-env]
-    if: needs.build-indexer.result == 'success'
+    if: |
+      always() &&
+      needs.infrastructure-ready.result == 'success' &&
+      (needs.build-indexer.result == 'success' || needs.build-indexer.result == 'skipped')
     uses: ./.github/workflows/__deploy-service.yml
     secrets: inherit
     with:
@@ -199,7 +203,10 @@ jobs:
 
   deploy-liquidator:
     needs: [build-liquidator, infrastructure-ready, set-env]
-    if: needs.build-liquidator.result == 'success'
+    if: |
+      always() &&
+      needs.infrastructure-ready.result == 'success' &&
+      (needs.build-liquidator.result == 'success' || needs.build-liquidator.result == 'skipped')
     uses: ./.github/workflows/__deploy-service.yml
     secrets: inherit
     with:
