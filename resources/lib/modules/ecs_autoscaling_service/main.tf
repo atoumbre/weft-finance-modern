@@ -188,18 +188,18 @@ locals {
   # Generate SQS Policy Statements for external queues
   external_sqs_statements = [
     for p in var.sqs_permissions : {
-      effect   = "Allow"
-      action   = local.sqs_actions[p.access_type]
-      resource = [p.queue_arn]
+      Effect   = "Allow"
+      Action   = local.sqs_actions[p.access_type]
+      Resource = [p.queue_arn]
     }
   ]
 
   # Generate SQS Policy Statements for internal queues
   internal_sqs_statements = [
     for name, config in var.queues_to_create : {
-      effect   = "Allow"
-      action   = local.sqs_actions[config.access_type]
-      resource = [aws_sqs_queue.main[name].arn]
+      Effect   = "Allow"
+      Action   = local.sqs_actions[config.access_type]
+      Resource = [aws_sqs_queue.main[name].arn]
     }
   ]
 
@@ -256,14 +256,8 @@ resource "aws_iam_role_policy" "extra" {
 resource "aws_iam_role_policy" "execution_ssm" {
   count = length(var.secrets) > 0 ? 1 : 0
   name  = "${var.service_name}-execution-ssm-policy"
-  role  = var.execution_role_arn
-  # We extract the role ID from the ARN if it's passed as a string, but the variable is execution_role_arn
-  # Wait, execution_role_arn is already the ARN. Role property in aws_iam_role_policy takes role NAME or ID.
-  # Let's assume the name is extractable if it's an ARN, but better to pass the name.
-  # Actually, the user passes aws_iam_role.ecs_execution_role.arn usually.
-  # Let's fix the variable naming or just use the name if possible.
-  # Actually, I'll just use the variable as is, assuming it's the role name/id for now or fix callers.
-  # Most existing callers pass aws_iam_role.ecs_execution_role.arn
+  # Extract role name from ARN (arn:aws:iam::account-id:role/role-name)
+  role = element(split("/", var.execution_role_arn), length(split("/", var.execution_role_arn)) - 1)
 
   policy = jsonencode({
     Version = "2012-10-17"

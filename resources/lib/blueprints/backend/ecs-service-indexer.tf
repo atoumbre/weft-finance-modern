@@ -61,6 +61,10 @@ module "indexer_service" {
   execution_role_arn = aws_iam_role.ecs_execution_role.arn
   aws_region         = var.aws_region
 
+  create_ecr_repo  = true
+  ecr_repo_name    = "weft-indexer"
+  create_task_role = true
+
   logging_config = {
     retention_days = var.log_retention_days
     group_name     = "/aws/ecs/weft-${var.environment}-indexer"
@@ -106,9 +110,9 @@ module "indexer_service" {
 
   extra_task_policy_statements = [
     {
-      effect   = "Allow"
-      action   = ["s3:PutObject"]
-      resource = ["${module.cdp_data_bucket.bucket_arn}/*"]
+      Effect   = "Allow"
+      Action   = ["s3:PutObject"]
+      Resource = ["${module.cdp_data_bucket.bucket_arn}/*"]
     }
   ]
 }

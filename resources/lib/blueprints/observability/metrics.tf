@@ -103,7 +103,7 @@ locals {
     "%s-%s-%s",
     var.fallback_bucket_name,
     data.aws_caller_identity.current.account_id,
-    data.aws_region.current.name
+    var.aws_region
   )
 }
 
@@ -295,7 +295,7 @@ resource "grafana_cloud_provider_aws_account" "main" {
 
   stack_id = data.grafana_cloud_stack.main.id
   role_arn = aws_iam_role.grafana_cloud_aws_resource_metadata.arn
-  regions  = [data.aws_region.current.name]
+  regions  = [var.aws_region]
 }
 
 resource "grafana_cloud_provider_aws_resource_metadata_scrape_job" "main" {

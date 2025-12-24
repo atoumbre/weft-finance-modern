@@ -16,7 +16,7 @@ provider "aws" {
   region = "us-east-1"
 }
 
-
+data "aws_caller_identity" "current" {}
 
 module "mainnet_backend" {
   source = "../lib/blueprints/backend"
@@ -91,7 +91,7 @@ module "observability_mainnet" {
   ssm_parameter_name_grafana_log_token    = "/weft/oservability/grafana_log_token"
   write_address                           = "https://logs-prod-042.grafana.net/loki/api/v1/push"
   username                                = "1432998"
-  s3_bucket                               = "admin-misc-artifacts"
+  s3_bucket                               = "admin-misc-artifacts-${data.aws_caller_identity.current.account_id}"
   s3_key                                  = "lambda-promtail.zip"
   keep_stream                             = "false"
   extra_labels                            = "app,weft,env,mainnet"
