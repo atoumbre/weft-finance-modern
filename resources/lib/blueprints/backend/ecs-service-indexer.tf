@@ -77,6 +77,7 @@ module "indexer_service" {
     target_value       = var.ecs_indexer_scaling_target_value
     scale_in_cooldown  = var.ecs_indexer_scale_in_cooldown
     scale_out_cooldown = var.ecs_indexer_scale_out_cooldown
+    dimension_value    = "weft-${var.environment}-indexer-main-queue"
   }
 
   network_config = {
