@@ -10,9 +10,9 @@ ENV PNPM_CONFIG_TRUST_POLICY=none
 # Copy the entire services directory (build context is 'services')
 COPY . .
 
-# Install all dependencies and build
+# Install all dependencies and build everything in the workspace
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter indexer build
+RUN pnpm build
 
 # Use pnpm deploy to create a standalone production directory
 RUN pnpm --filter indexer --prod deploy /app/deployed
