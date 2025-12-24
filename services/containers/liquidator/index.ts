@@ -16,6 +16,8 @@ async function liquidateCdp(cdpId: string, localLogger: ILogger) {
         CALL_METHOD Address("${LENDING_MARKET_COMPONENT}") "liquidate" NonFungibleLocalId("${cdpId}");
 `
 
+
+
   // In a real implementation:
   // 1. Convert manifest to Intent
   // 2. Sign Intent with Private Key (from SEED_PHRASE)
