@@ -48,7 +48,7 @@ module "mainnet_backend" {
 
   ecs_indexer_min_capacity         = 0
   ecs_indexer_max_capacity         = 5
-  ecs_indexer_scaling_target_value = 10
+  ecs_indexer_scaling_target_value = 10.0
   ecs_indexer_scale_out_cooldown   = 60
   ecs_indexer_scale_in_cooldown    = 60
 
@@ -60,7 +60,7 @@ module "mainnet_backend" {
 
   ecs_liquidator_min_capacity         = 0
   ecs_liquidator_max_capacity         = 5
-  ecs_liquidator_scaling_target_value = 10
+  ecs_liquidator_scaling_target_value = 10.0
   ecs_liquidator_scale_out_cooldown   = 60
   ecs_liquidator_scale_in_cooldown    = 60
 
