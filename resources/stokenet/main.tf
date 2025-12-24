@@ -59,16 +59,16 @@ module "stokenet_backend" {
   ecs_indexer_min_capacity         = 1
   ecs_indexer_max_capacity         = 5
   ecs_indexer_scaling_target_value = 100.0
-  ecs_indexer_scale_out_cooldown   = 60
+  ecs_indexer_scale_out_cooldown   = 120
   ecs_indexer_scale_in_cooldown    = 60
 
   # Liquidator Auto Scaling
   ssm_parameter_name_seed_phrase = "/weft/stokenet/liquidation_seed_phrase"
 
-  ecs_liquidator_min_capacity         = 0
+  ecs_liquidator_min_capacity         = 1
   ecs_liquidator_max_capacity         = 5
   ecs_liquidator_scaling_target_value = 100.0
-  ecs_liquidator_scale_out_cooldown   = 60
+  ecs_liquidator_scale_out_cooldown   = 120
   ecs_liquidator_scale_in_cooldown    = 60
 
   # Oracle Updater Configs
