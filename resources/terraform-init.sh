@@ -29,6 +29,6 @@ fi
 state_key="${TF_TARGET}.tfstate"
 
 terraform -chdir="$TF_DIR" init -reconfigure \
-  -backend-config="bucket=terraform-state-${ACCOUNT_ID}" \
+  -backend-config="bucket=admin-terraform-state-${ACCOUNT_ID}" \
   -backend-config="key=${state_key}" \
   -backend-config="region=${AWS_REGION}" 

@@ -34,7 +34,6 @@ variable "oracle_updater_badge_nft_id" {
   default     = "#1#"
 }
 
-
 module "oracle_updater" {
   source = "../../modules/scheduled_lambda"
 

@@ -39,11 +39,4 @@ module "artefacts_bucket" {
 }
 
 
-output "param_state_region" {
-  value = var.aws_region
-}
-
-output "param_state_bucket" {
-  value = module.terraform_state_bucket.bucket_id
-}
 

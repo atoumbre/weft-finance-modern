@@ -1,4 +1,14 @@
 
+terraform {
+  required_providers {
+    grafana = {
+      source  = "grafana/grafana"
+      version = ">= 3.24.1"
+    }
+  }
+}
+
+
 variable "aws_region" {
   description = "AWS region to deploy observability resources into."
   type        = string
@@ -12,12 +22,8 @@ variable "cloud_provider_url" {
 provider "grafana" {
   cloud_provider_access_token = data.aws_ssm_parameter.grafana_metric_token.value
   cloud_access_policy_token   = data.aws_ssm_parameter.grafana_metric_token.value
-  cloud_provider_url          = var.cloud_provider_url
+  cloud_provider_url          = "https://cloud-provider-api-prod-us-east-3.grafana.net"
 }
-
-# data "aws_region" "current" {}
-
-# data "aws_caller_identity" "current" {}
 
 variable "ssm_parameter_name_grafana_metric_token" {
   type = string

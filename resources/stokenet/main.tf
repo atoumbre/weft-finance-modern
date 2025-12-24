@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
+    grafana = {
+      source  = "grafana/grafana"
+      version = ">= 3.24.1"
+    }
   }
   backend "s3" {}
 }
@@ -73,4 +77,28 @@ module "stokenet_backend" {
   oracle_updater_badge_resource_address = "TODO_STOKENET_ADDRESS"
   oracle_updater_component_address      = "TODO_STOKENET_ADDRESS"
   oracle_updater_badge_nft_id           = "#1#"
+}
+
+
+module "observability_stokenet" {
+  source = "../lib/blueprints/observability"
+
+  aws_region                              = "us-east-1"
+  grafana_cloud_stack_slug                = "atoumbre"
+  ssm_parameter_name_grafana_metric_token = "/weft/oservability/grafana_metric_token"
+  cloud_provider_url                      = "https://cloud-provider-api-prod-us-east-3.grafana.net"
+  ssm_parameter_name_grafana_log_token    = "/weft/oservability/grafana_log_token"
+  write_address                           = "https://logs-prod-042.grafana.net/loki/api/v1/push"
+  username                                = "1432998"
+  s3_bucket                               = "misc-admin-artefacts"
+  s3_key                                  = "lambda-promtail.zip"
+  keep_stream                             = "false"
+  extra_labels                            = "app,weft,env,stokenet"
+  batch_size                              = "8192"
+  include_namespaces                      = ["AWS/ECS"]
+  log_group_names = [
+    "/aws/lambda/weft-stokenet-dispatcher",
+    "/aws/ecs/weft-stokenet-indexer",
+    "/aws/ecs/weft-stokenet-liquidator"
+  ]
 }
