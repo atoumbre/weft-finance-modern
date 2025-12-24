@@ -14,9 +14,15 @@
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "common-utils": [
+        "../../packages/common-utils/src/index.ts"
+      ]
+    }
   },
   "include": [
-    "src/index.ts"
+    "src/**/*",
+    "test/**/*"
   ]
 }

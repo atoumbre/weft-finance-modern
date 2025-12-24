@@ -4,6 +4,7 @@
     "lib": [
       "ES2020"
     ],
+    "baseUrl": ".",
     "rootDir": "./",
     "module": "commonjs",
     "types": [
@@ -13,7 +14,12 @@
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "common-utils": [
+        "../../packages/common-utils/src/index.ts"
+      ]
+    }
   },
   "include": [
     "index.ts"
