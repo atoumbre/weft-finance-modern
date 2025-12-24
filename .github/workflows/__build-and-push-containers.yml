@@ -42,6 +42,11 @@ on:
         description: "Optional command to run before container build."
         required: false
         type: string
+      dockerfile:
+        description: "Path to Dockerfile (relative to service_path)."
+        required: false
+        type: string
+        default: "Dockerfile"
 
 permissions:
   id-token: write
@@ -98,4 +103,5 @@ jobs:
             --pull \
             -t "${IMAGE}:${{ inputs.image_tag }}" \
             -t "${IMAGE}:latest" \
+            -f "${{ inputs.service_path }}/${{ inputs.dockerfile }}" \
             --push "${{ inputs.service_path }}"

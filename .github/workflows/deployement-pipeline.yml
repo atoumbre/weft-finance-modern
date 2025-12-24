@@ -152,7 +152,8 @@ jobs:
     uses: ./.github/workflows/__build-and-push-containers.yml
     with:
       service_name: indexer
-      service_path: services/containers/indexer
+      service_path: services
+      dockerfile: containers/indexer/Dockerfile
       working_directory: services/containers/indexer
       image_tag: ${{ github.sha }}
     secrets:
@@ -164,7 +165,8 @@ jobs:
     uses: ./.github/workflows/__build-and-push-containers.yml
     with:
       service_name: liquidator
-      service_path: services/containers/liquidator
+      service_path: services
+      dockerfile: containers/liquidator/Dockerfile
       working_directory: services/containers/liquidator
       image_tag: ${{ github.sha }}
     secrets:
