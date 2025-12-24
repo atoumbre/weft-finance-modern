@@ -11,42 +11,42 @@ jobs:
   filter:
     runs-on: ubuntu-latest
     outputs:
-      admin: ${{ steps.filter.outputs.admin }}
-      backend: ${{ steps.filter.outputs.backend }}
-      observability: ${{ steps.filter.outputs.observability }}
+      shared: ${{ steps.filter.outputs.shared }}
+      mainnet: ${{ steps.filter.outputs.mainnet }}
+      stokenet: ${{ steps.filter.outputs.stokenet }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
-            admin:
-              - "resources/admin/**"
-            backend:
-              - "resources/backend/**"
-            observability:
-              - "resources/observability/**"
+            shared:
+              - "resources/shared/**"
+            mainnet:
+              - "resources/mainnet/**"
+            stokenet:
+              - "resources/stokenet/**"
 
-  validate-admin:
+  validate-shared:
     needs: [filter]
-    if: needs.filter.outputs.admin == 'true'
+    if: needs.filter.outputs.shared == 'true'
     uses: ./.github/workflows/__validate-terraform.yml
     with:
-      resource-path: resources/admin
-      resource-name: admin
+      resource-path: resources/shared
+      resource-name: shared
 
-  validate-backend:
+  validate-mainnet:
     needs: [filter]
-    if: needs.filter.outputs.backend == 'true'
+    if: needs.filter.outputs.mainnet == 'true'
     uses: ./.github/workflows/__validate-terraform.yml
     with:
-      resource-path: resources/backend
-      resource-name: backend
+      resource-path: resources/mainnet
+      resource-name: mainnet
 
-  validate-observability:
+  validate-stokenet:
     needs: [filter]
-    if: needs.filter.outputs.observability == 'true'
+    if: needs.filter.outputs.stokenet == 'true'
     uses: ./.github/workflows/__validate-terraform.yml
     with:
-      resource-path: resources/observability
-      resource-name: observability
+      resource-path: resources/stokenet
+      resource-name: stokenet
