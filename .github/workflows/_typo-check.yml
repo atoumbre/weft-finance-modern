@@ -19,4 +19,4 @@ jobs:
       - name: Install cspell
         run: npm install -g cspell
       - name: Typos
-        run: cspell -c ./cspell.json . --quiet
+        run: cspell . --quiet
