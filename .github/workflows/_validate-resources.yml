@@ -29,8 +29,7 @@ jobs:
 
   validate-shared:
     needs: [filter]
-    if: |
-      always() || needs.filter.outputs.shared == 'true'
+    if: needs.filter.outputs.shared == 'true'
     uses: ./.github/workflows/__validate-terraform.yml
     with:
       resource-path: resources/shared
@@ -38,8 +37,7 @@ jobs:
 
   validate-mainnet:
     needs: [filter]
-    if: |
-      always() || needs.filter.outputs.mainnet == 'true'
+    if: needs.filter.outputs.mainnet == 'true'
     uses: ./.github/workflows/__validate-terraform.yml
     with:
       resource-path: resources/mainnet
@@ -47,8 +45,7 @@ jobs:
 
   validate-stokenet:
     needs: [filter]
-    if: |
-      always() || needs.filter.outputs.stokenet == 'true'
+    if: needs.filter.outputs.stokenet == 'true'
     uses: ./.github/workflows/__validate-terraform.yml
     with:
       resource-path: resources/stokenet

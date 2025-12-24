@@ -72,6 +72,7 @@ resource "aws_iam_role_policy" "gha_scoped" {
           "ssm:*",
           "budgets:*",
           "firehose:*",
+          "cloudwatch:*",
           "sts:GetCallerIdentity",
           "application-autoscaling:*",
         ]
