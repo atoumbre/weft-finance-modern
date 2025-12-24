@@ -14,7 +14,7 @@
     "@radixdlt/babylon-gateway-api-sdk": "^1.10.1",
     "@weft-finance/ledger-state": "^0.0.16",
     "common-utils": "workspace:*",
-    "pino": "^9.0.0"
+    "pino": "^10.1.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.159",

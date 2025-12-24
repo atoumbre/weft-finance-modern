@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/index.ts",
   "dependencies": {
-    "pino": "^9.0.0",
+    "pino": "^10.1.0",
     "tslog": "^4.10.2"
   },
   "devDependencies": {

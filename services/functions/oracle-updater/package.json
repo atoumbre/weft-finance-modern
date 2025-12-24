@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "common-utils": "workspace:*",
-    "pino": "^9.0.0"
+    "pino": "^10.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.27",

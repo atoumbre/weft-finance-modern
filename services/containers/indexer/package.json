@@ -14,7 +14,7 @@
     "@weft-finance/ledger-state": "^0.0.16",
     "common-utils": "workspace:*",
     "decimal.js": "^10.6.0",
-    "pino": "^9.0.0"
+    "pino": "^10.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.27",
