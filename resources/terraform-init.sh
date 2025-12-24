@@ -2,13 +2,6 @@
 set -euo pipefail
 
 TF_TARGET="${1:-backend}"
-ENVIRONMENT="${2:-}"
-if [ "$TF_TARGET" = "backend" ] && [ -z "$ENVIRONMENT" ]; then
-  echo "Usage: $(basename "$0") [backend|bootstrap|ecr|observability|logs] [environment]" >&2
-  echo "Example: $(basename "$0") backend mainnet" >&2
-  echo "Example: $(basename "$0") bootstrap" >&2
-  exit 1
-fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -33,14 +26,9 @@ if [ -z "$ACCOUNT_ID" ] || [ "$ACCOUNT_ID" = "None" ]; then
   exit 1
 fi
 
-
-if [ -n "$ENVIRONMENT" ]; then
-  state_key="${TF_TARGET}-${ENVIRONMENT}.tfstate"
-else
-  state_key="${TF_TARGET}.tfstate"
-fi
+state_key="${TF_TARGET}.tfstate"
 
 terraform -chdir="$TF_DIR" init -reconfigure \
-  -backend-config="bucket=weft-terraform-state-${ACCOUNT_ID}" \
+  -backend-config="bucket=terraform-state-${ACCOUNT_ID}" \
   -backend-config="key=${state_key}" \
   -backend-config="region=${AWS_REGION}" 

@@ -36,7 +36,7 @@ variable "oracle_updater_badge_nft_id" {
 
 
 module "oracle_updater" {
-  source = "./modules/scheduled_lambda"
+  source = "../../modules/scheduled_lambda"
 
   function_name      = "weft-${var.environment}-oracle-updater"
   schedule           = var.oracle_updater_schedule
