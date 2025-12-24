@@ -90,7 +90,7 @@ module "observability_stokenet" {
   ssm_parameter_name_grafana_log_token    = "/weft/oservability/grafana_log_token"
   write_address                           = "https://logs-prod-042.grafana.net/loki/api/v1/push"
   username                                = "1432998"
-  s3_bucket                               = "misc-admin-artefacts"
+  s3_bucket                               = "misc-admin-artifacts"
   s3_key                                  = "lambda-promtail.zip"
   keep_stream                             = "false"
   extra_labels                            = "app,weft,env,stokenet"

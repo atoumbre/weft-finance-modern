@@ -29,10 +29,10 @@ module "terraform_state_bucket" {
   force_destroy = true
 }
 
-module "artefacts_bucket" {
+module "artifacts_bucket" {
   source = "../lib/modules/secure_s3_bucket"
 
-  bucket_name = "admin-misc-artefacts-${data.aws_caller_identity.current.account_id}"
+  bucket_name = "admin-misc-artifacts-${data.aws_caller_identity.current.account_id}"
 
   # TODO: remove after development is done
   force_destroy = true

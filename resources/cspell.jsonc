@@ -2,7 +2,7 @@
   // Version of the setting file.  Always 0.2
   "version": "0.2",
   // language - current active spelling language
-  "language": "en,fr,fr-FR",
+  "language": "en",
   // flagWords - list of words to be always considered incorrect
   // This is useful for offensive words and common spelling errors.
   // For example "hte" should be "the"
@@ -36,6 +36,7 @@
     "cdps",
     "chdir",
     "coingecko",
+    "Collateralized",
     "cooldown",
     "corepack",
     "dorny",
@@ -43,6 +44,7 @@
     "fargate",
     "fileb",
     "github",
+    "grafana",
     "grafanalabs",
     "hashicorp",
     "hostnames",
@@ -51,6 +53,7 @@
     "mainnet",
     "OIDC",
     "opentelemetry",
+    "oservability",
     "outfile",
     "precheck",
     "promtail",
@@ -61,7 +64,6 @@
     "tfstate",
     "tfvars",
     "toset",
-    "zipfile",
-    "Collateralized"
+    "zipfile"
   ]
 }
