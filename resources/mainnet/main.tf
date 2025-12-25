@@ -45,29 +45,33 @@ module "mainnet_backend" {
   ecs_liquidator_memory = "512"
 
   # Indexer Auto Scaling
+  # The dispatcher sends 2 messages per minute (batches of ~500 CDPs).
+  # We keep 1 task always-on to avoid cold start delays.
 
   indexer_batch_size = 500
 
-  ecs_indexer_min_capacity         = 0
-  ecs_indexer_max_capacity         = 5
-  ecs_indexer_scaling_target_value = 10.0
-  ecs_indexer_scale_out_cooldown   = 60
-  ecs_indexer_scale_in_cooldown    = 60
+  ecs_indexer_min_capacity         = 0   # Always-on to handle predictable load
+  ecs_indexer_max_capacity         = 2   # Max 2 messages/min, so 2 tasks is plenty
+  ecs_indexer_scaling_target_value = 5   # 1 message per task
+  ecs_indexer_scale_out_cooldown   = 30  # Fast scale-out
+  ecs_indexer_scale_in_cooldown    = 300 # Slow scale-in to prevent oscillation
 
   indexer_sqs_visibility_timeout = 600
   indexer_sqs_max_receive_count  = 3
 
   # Liquidator Auto Scaling
+  # Liquidations are bursty and rare. Scale from 0 to save costs.
   ssm_parameter_name_seed_phrase = "/weft/mainnet/liquidation_seed_phrase"
 
-  ecs_liquidator_min_capacity         = 0
-  ecs_liquidator_max_capacity         = 5
-  ecs_liquidator_scaling_target_value = 10.0
-  ecs_liquidator_scale_out_cooldown   = 60
-  ecs_liquidator_scale_in_cooldown    = 60
+  ecs_liquidator_min_capacity         = 0   # Scale from 0 to save costs
+  ecs_liquidator_max_capacity         = 3   # Enough for concurrent at-risk CDPs
+  ecs_liquidator_scaling_target_value = 5   # 1 message per task for fast response
+  ecs_liquidator_scale_out_cooldown   = 30  # Fast scale-out for time-sensitive liquidations
+  ecs_liquidator_scale_in_cooldown    = 300 # Slow scale-in
 
   liquidator_sqs_visibility_timeout = 600
   liquidator_sqs_max_receive_count  = 3
+
 
   # Dispatcher Config (Lambda)
   dispatcher_schedule = "rate(1 minutes)"
