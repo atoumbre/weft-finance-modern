@@ -43,7 +43,7 @@ module "mainnet_backend" {
   indexer_sqs_max_receive_count  = 3
 
   # Liquidator Auto Scaling
-  # Liquidations are bursty and rare. Scale from 0 to save costs.
+
   ssm_parameter_name_seed_phrase = "/weft/mainnet/liquidation_seed_phrase"
 
   ecs_liquidator_min_capacity         = 0   # Scale from 0 to save costs
