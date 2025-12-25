@@ -20,8 +20,6 @@ variable "indexer_batch_size" {
   type        = number
 }
 
-
-
 module "dispatcher" {
   source = "../../modules/scheduled_lambda"
 

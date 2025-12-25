@@ -7,9 +7,7 @@ import { GatewayApiClient } from '@radixdlt/babylon-gateway-api-sdk'
 import { WeftLedgerSateFetcher } from '@weft-finance/ledger-state'
 import { createLogger } from 'common-utils'
 
-//
-//
-//
+
 
 const logger = createLogger({ service: 'indexer' })
 

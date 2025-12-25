@@ -1,20 +1,3 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
-    grafana = {
-      source  = "grafana/grafana"
-      version = ">= 3.24.1"
-    }
-  }
-  backend "s3" {}
-}
-
-provider "aws" {
-  region = "us-east-1"
-}
 
 data "aws_caller_identity" "current" {}
 
@@ -52,7 +35,7 @@ module "mainnet_backend" {
 
   ecs_indexer_min_capacity         = 0   # Always-on to handle predictable load
   ecs_indexer_max_capacity         = 2   # Max 2 messages/min, so 2 tasks is plenty
-  ecs_indexer_scaling_target_value = 5   # 1 message per task
+  ecs_indexer_scaling_target_value = 30  # 1 message per task
   ecs_indexer_scale_out_cooldown   = 30  # Fast scale-out
   ecs_indexer_scale_in_cooldown    = 300 # Slow scale-in to prevent oscillation
 
@@ -65,7 +48,7 @@ module "mainnet_backend" {
 
   ecs_liquidator_min_capacity         = 0   # Scale from 0 to save costs
   ecs_liquidator_max_capacity         = 3   # Enough for concurrent at-risk CDPs
-  ecs_liquidator_scaling_target_value = 5   # 1 message per task for fast response
+  ecs_liquidator_scaling_target_value = 30  # 1 message per task for fast response
   ecs_liquidator_scale_out_cooldown   = 30  # Fast scale-out for time-sensitive liquidations
   ecs_liquidator_scale_in_cooldown    = 300 # Slow scale-in
 
@@ -104,7 +87,7 @@ module "observability_mainnet" {
   keep_stream                             = "false"
   extra_labels                            = "app,weft,env,mainnet"
   batch_size                              = "8192"
-  include_namespaces                      = ["AWS/ECS", "AWS/SQS", "AWS/EC2", "AWS/Lambda"]
+  include_namespaces                      = ["AWS/ECS", "AWS/SQS", "AWS/Lambda"]
   log_group_names = [
     "/aws/lambda/weft-mainnet-dispatcher",
     "/aws/ecs/weft-mainnet-indexer",
