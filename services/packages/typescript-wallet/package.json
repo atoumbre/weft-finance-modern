@@ -1,5 +1,5 @@
 {
-  "name": "typescript-wallet",
+  "name": "@local-packages/typescript-wallet",
   "type": "module",
   "license": "SEE LICENSE",
   "main": "./dist/index.js",

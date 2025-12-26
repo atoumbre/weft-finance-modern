@@ -17,6 +17,9 @@ importers:
       '@radixdlt/babylon-gateway-api-sdk':
         specifier: ^1.10.1
         version: 1.10.1
+      '@weft-finance/cdp-liquidator':
+        specifier: workspace:*
+        version: link:../../packages/cdp-liquidator
       '@weft-finance/ledger-state':
         specifier: ^0.0.16
         version: 0.0.16

@@ -1,15 +1,16 @@
 {
-  "name": "oracle-updater",
+  "name": "@local-worker/oracle-updater",
   "version": "1.0.0",
   "packageManager": "pnpm@10.26.0+sha512.3b3f6c725ebe712506c0ab1ad4133cf86b1f4b687effce62a9b38b4d72e3954242e643190fc51fa1642949c735f403debd44f5cb0edd657abe63a8b6a7e1e402",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsup src/index.ts",
     "bundle": "esbuild src/index.ts --bundle --platform=node --target=node22 --outfile=dist/index.js",
-    "test": "pnpm run build && bun test"
+    "test": "bun test"
   },
   "dependencies": {
-    "common-utils": "workspace:*",
+    "@local-packages/common-utils": "workspace:*",
+    "@local-packages/price-updater": "workspace:*",
     "pino": "^10.1.0"
   },
   "devDependencies": {

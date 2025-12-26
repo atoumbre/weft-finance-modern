@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@weft-finance/price-updater':
+        specifier: workspace:*
+        version: link:../../packages/price-updater
       common-utils:
         specifier: workspace:*
         version: link:../../packages/common-utils

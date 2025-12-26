@@ -5,9 +5,13 @@ TF_TARGET="${1:-backend}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-TF_DIR="${PROJECT_ROOT}/resources/${TF_TARGET}"
 
-if [ ! -d "$TF_DIR" ]; then
+# Check if target exists in environments/ or root resources/
+if [ -d "${PROJECT_ROOT}/resources/environments/${TF_TARGET}" ]; then
+  TF_DIR="${PROJECT_ROOT}/resources/environments/${TF_TARGET}"
+elif [ -d "${PROJECT_ROOT}/resources/${TF_TARGET}" ]; then
+  TF_DIR="${PROJECT_ROOT}/resources/${TF_TARGET}"
+else
   echo "Unsupported target: $TF_TARGET" >&2
   exit 1
 fi

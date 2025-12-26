@@ -1,9 +1,11 @@
-import type { ILogger } from 'common-utils'
-import { randomUUID } from 'node:crypto'
 import { SendMessageBatchCommand, SQSClient } from '@aws-sdk/client-sqs'
+import type { ILogger } from '@local-packages/common-utils'
+import { createLogger } from '@local-packages/common-utils'
 import { GatewayApiClient } from '@radixdlt/babylon-gateway-api-sdk'
 import { WeftLedgerSateFetcher } from '@weft-finance/ledger-state'
-import { createLogger } from 'common-utils'
+import { randomUUID } from 'node:crypto'
+import { CdpIdFetcher, fetchAndBatchCdpIds } from './fetcher'
+export type { CdpIdFetcher } from './fetcher'
 
 const logger = createLogger({ service: 'dispatcher' })
 
@@ -13,14 +15,10 @@ function requireEnv(name: string): string {
     throw new Error(`Missing required env var: ${name}`)
   return value
 }
-//
-//
-
-export type Fetcher = Pick<WeftLedgerSateFetcher, 'getCdpIds'>
 
 export function createDispatcherHandler(params: {
   sqs: Pick<SQSClient, 'send'>
-  fetcher: Fetcher
+  fetcher: CdpIdFetcher
   indexerQueueUrl: string
   indexerBatchSize: number
   logger?: ILogger
@@ -123,59 +121,49 @@ export function createDispatcherHandler(params: {
     })
   }
 
-  //
-
   return async () => {
     const runId = runIdFactory()
-    const startedAt = Date.now()
     const localLogger = baseLogger.child({ runId })
 
     localLogger.info({ event: 'dispatcher.start', indexerBatchSize, queueUrl })
 
     try {
-      localLogger.info({ event: 'dispatcher.fetch.start' })
-      const items = await params.fetcher.getCdpIds(false)
+      const dispatchData = await fetchAndBatchCdpIds({
+        fetcher: params.fetcher,
+        indexerBatchSize,
+        runId,
+        logger: localLogger,
+      })
 
-      const ids = items.map(item => item.non_fungible_id)
-
-      localLogger.info({ event: 'dispatcher.fetch.complete', cdpCount: ids.length, durationMs: Date.now() - startedAt })
-
-      const chunks: string[][] = []
-      for (let i = 0; i < ids.length; i += indexerBatchSize) {
-        chunks.push(ids.slice(i, i + indexerBatchSize))
+      if (dispatchData.length === 0) {
+        localLogger.info({ event: 'dispatcher.complete', cdpCount: 0, totalChunks: 0 })
+        return { statusCode: 200, body: 'No CDPs to dispatch' }
       }
 
-      localLogger.info({ event: 'dispatcher.batch.split', chunkCount: chunks.length, chunkSize: indexerBatchSize })
-
       const SQS_BATCH_LIMIT = 10
-      for (let i = 0; i < chunks.length; i += SQS_BATCH_LIMIT) {
-        const batchOfChunks = chunks.slice(i, i + SQS_BATCH_LIMIT)
-        const chunkCount = chunks.length
+      for (let i = 0; i < dispatchData.length; i += SQS_BATCH_LIMIT) {
+        const batchOfChunks = dispatchData.slice(i, i + SQS_BATCH_LIMIT)
 
-        const entries = batchOfChunks.map((chunk, index) => ({
+        const entries = batchOfChunks.map((chunk: any, index: number) => ({
           Id: `${i + index}`,
-          MessageBody: JSON.stringify({
-            runId,
-            chunkIndex: i + index + 1,
-            chunkCount,
-            cdpIds: chunk,
-          }),
+          MessageBody: JSON.stringify(chunk),
         }))
 
         const batchIndex = Math.floor(i / SQS_BATCH_LIMIT) + 1
-        const batchCount = Math.ceil(chunks.length / SQS_BATCH_LIMIT)
+        const batchCount = Math.ceil(dispatchData.length / SQS_BATCH_LIMIT)
         await sendBatch(entries, localLogger, { batchIndex, batchCount })
       }
 
-      localLogger.info({ event: 'dispatcher.complete', cdpCount: ids.length, totalChunks: chunks.length, durationMs: Date.now() - startedAt })
-      return { statusCode: 200, body: `Dispatched ${ids.length} CDPs` }
+      const totalCdps = dispatchData.reduce((acc: number, curr: any) => acc + curr.cdpIds.length, 0)
+      localLogger.info({ event: 'dispatcher.complete', cdpCount: totalCdps, totalChunks: dispatchData.length })
+      return { statusCode: 200, body: `Dispatched ${totalCdps} CDPs` }
     }
     catch (error) {
       localLogger.error({ event: 'dispatcher.error', err: error })
       throw error
     }
   }
-};
+}
 
 let cachedDefaultHandler: (() => Promise<{ statusCode: number, body: string }>) | undefined
 

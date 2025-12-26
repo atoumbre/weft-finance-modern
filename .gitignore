@@ -39,3 +39,6 @@ pnpm-debug.log*
 CLAUDE.md
 scripts/trigger-all-builds.sh
 services/functions/oracle-updater/.trigger
+
+# Misc
+*.sh

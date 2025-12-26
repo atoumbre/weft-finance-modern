@@ -1,12 +1,13 @@
 /// <reference types="bun-types" />
 
-import type { CollateralizeDebtPositionData } from '@weft-finance/ledger-state'
-import type { Fetcher } from '../src/index'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { DeleteMessageCommand, ReceiveMessageCommand, SendMessageCommand } from '@aws-sdk/client-sqs'
+import type { CollateralizeDebtPositionData } from '@weft-finance/ledger-state'
 import { expect, test } from 'bun:test'
 import Decimal from 'decimal.js'
-import { checkRisk, createIndexerWorker, createMessageProcessor } from '../src/index'
+import { checkRisk, type CdpDetailFetcher } from '../src/indexer'
+import { createIndexerWorker, createMessageProcessor } from '../src'
+
 
 const silentLogger = {
   info: () => undefined,
@@ -27,7 +28,7 @@ test('message processor ignores messages with missing Body', async () => {
   const s3Calls: unknown[] = []
   const fetcherCalls: unknown[] = []
 
-  const fetcher: Fetcher = {
+  const fetcher: CdpDetailFetcher = {
     getMultipleCdp: async (ids: string[], options?: unknown) => {
       fetcherCalls.push([ids, options])
       return { data: [], failedIds: [] }
@@ -53,7 +54,7 @@ test('message processor ignores messages with missing Body', async () => {
 test('message processor ignores messages with empty cdpIds', async () => {
   const fetcherCalls: unknown[] = []
 
-  const fetcher: Fetcher = {
+  const fetcher: CdpDetailFetcher = {
     getMultipleCdp: async (ids: string[], options?: unknown) => {
       fetcherCalls.push([ids, options])
       return { data: [], failedIds: [] }
@@ -129,11 +130,11 @@ test('message processor enqueues liquidation when there are at-risk CDPs', async
   await processMessage({ Body: JSON.stringify({ cdpIds: ['id1'] }) })
 
   expect(s3Calls.length).toBe(1)
-  const sendMessageCalls = sqsCalls.filter((c): c is SendMessageCommand => c instanceof SendMessageCommand)
+  const sendMessageCalls = sqsCalls.filter((c): c is SendMessageCommand => c instanceof SendMessageCommand)!
   expect(sendMessageCalls.length).toBe(1)
-  expect(sendMessageCalls[0].input.QueueUrl).toBe('liq-queue')
+  expect(sendMessageCalls[0]!.input.QueueUrl).toBe('liq-queue')
 
-  const payload = JSON.parse(sendMessageCalls[0].input.MessageBody!)
+  const payload = JSON.parse(sendMessageCalls[0]!.input.MessageBody!)
   expect(payload.reason).toBe('High LTV')
   expect(payload.cdpIds).toEqual(['risk', 'risk2'])
 })
@@ -143,7 +144,7 @@ test('indexer worker runOnce deletes messages after processing', async () => {
   const s3Calls: unknown[] = []
   const fetcherCalls: unknown[] = []
 
-  const fetcher: Fetcher = {
+  const fetcher: CdpDetailFetcher = {
     getMultipleCdp: async (ids: string[], options?: unknown) => {
       fetcherCalls.push([ids, options])
       return { data: [], failedIds: [] }

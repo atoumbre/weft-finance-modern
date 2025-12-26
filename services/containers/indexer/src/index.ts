@@ -1,17 +1,13 @@
-import type { ILogger } from 'common-utils'
-import type Decimal from 'decimal.js'
+import type { ILogger } from '@local-packages/common-utils'
 import process from 'node:process'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { DeleteMessageCommand, ReceiveMessageCommand, SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs'
+import { checkRisk, fetchCdpDetails } from './indexer'
+import { createLogger } from '@local-packages/common-utils'
 import { GatewayApiClient } from '@radixdlt/babylon-gateway-api-sdk'
 import { WeftLedgerSateFetcher } from '@weft-finance/ledger-state'
-import { createLogger } from 'common-utils'
-
-
 
 const logger = createLogger({ service: 'indexer' })
-
-export type Fetcher = Pick<WeftLedgerSateFetcher, 'getMultipleCdp'>
 
 function requireEnv(name: string): string {
   const value = process.env[name]
@@ -20,14 +16,10 @@ function requireEnv(name: string): string {
   return value
 }
 
-export function checkRisk(cdp: { liquidationLtv: Decimal }): boolean {
-  return cdp.liquidationLtv.gte(1)
-}
-
 export function createMessageProcessor(params: {
   sqs: Pick<SQSClient, 'send'>
   s3: Pick<S3Client, 'send'>
-  fetcher: Fetcher
+  fetcher: any // Type from package
   liquidationQueueUrl: string
   bucketName: string
   logger?: ILogger
@@ -68,7 +60,6 @@ export function createMessageProcessor(params: {
     const chunkCount = typeof body.chunkCount === 'number' ? body.chunkCount : undefined
     const cdpIds = Array.isArray(body.cdpIds) ? body.cdpIds : []
 
-    // Create a child logger for this request context
     const localLogger = baseLogger.child({ runId, messageId, chunkIndex, chunkCount })
 
     if (cdpIds.length === 0) {
@@ -77,38 +68,12 @@ export function createMessageProcessor(params: {
     }
 
     const ids = cdpIds.filter((id: any): id is string => typeof id === 'string' && id.length > 0)
-    if (ids.length !== cdpIds.length) {
-      localLogger.warn({
-        event: 'indexer.message.invalid_cdp_ids',
-        invalidCount: cdpIds.length - ids.length,
-      })
-    }
 
     try {
-      localLogger.info({
-        event: 'indexer.message.received',
-        cdpCount: ids.length,
-      })
-
-      const fetchStart = Date.now()
-      localLogger.info({
-        event: 'indexer.fetch.start',
-        cdpCount: ids.length,
-      })
-
-      let totalFetched = 0
-
-      const result = await params.fetcher.getMultipleCdp(ids, {
-        cdpPerBatch: 10,
-        onProgress: (fetched: number) => {
-          totalFetched += fetched
-          localLogger.info({
-            event: 'indexer.fetch.progress',
-            fetchedCount: fetched,
-            totalFetched,
-            total: ids.length,
-          })
-        },
+      const result = await fetchCdpDetails({
+        fetcher: params.fetcher,
+        cdpIds: ids,
+        logger: localLogger,
       })
 
       if (result.failedIds?.length) {
@@ -121,12 +86,6 @@ export function createMessageProcessor(params: {
       }
 
       const cdps = result.data
-      localLogger.info({
-        event: 'indexer.fetch.complete',
-        fetchedCount: cdps.length,
-        durationMs: Date.now() - fetchStart,
-      })
-
       const timestamp = now().getTime()
       const date = new Date(timestamp)
       const key = `cdp-data/${date.getUTCFullYear()}/${String(date.getUTCMonth() + 1).padStart(2, '0')}/${String(date.getUTCDate()).padStart(2, '0')}/cdp-batch-${timestamp}.json`
@@ -180,7 +139,7 @@ export function createMessageProcessor(params: {
 export function createIndexerWorker(params: {
   sqs: Pick<SQSClient, 'send'>
   s3: Pick<S3Client, 'send'>
-  fetcher: Fetcher
+  fetcher: any // Type from package
   queueUrl: string
   liquidationQueueUrl: string
   bucketName: string
@@ -190,6 +149,8 @@ export function createIndexerWorker(params: {
   const baseLogger = params.logger ?? logger
   if (!params.queueUrl)
     throw new Error('Missing queueUrl')
+
+  let shouldRun = true
 
   const processMessage = createMessageProcessor({
     sqs: params.sqs,
@@ -202,41 +163,66 @@ export function createIndexerWorker(params: {
   })
 
   async function runOnce() {
+    const maxMessages = Number.parseInt(process.env.MAX_MESSAGES ?? '10', 10)
+    const waitTimeSeconds = Number.parseInt(process.env.WAIT_TIME_SECONDS ?? '20', 10)
+
     const { Messages } = await params.sqs.send(new ReceiveMessageCommand({
       QueueUrl: params.queueUrl,
-      MaxNumberOfMessages: 1,
-      WaitTimeSeconds: 20,
+      MaxNumberOfMessages: maxMessages,
+      WaitTimeSeconds: waitTimeSeconds,
     }))
 
-    if (Messages) {
-      for (const msg of Messages) {
-        await processMessage(msg)
-        if (msg.ReceiptHandle) {
-          await params.sqs.send(new DeleteMessageCommand({
-            QueueUrl: params.queueUrl,
-            ReceiptHandle: msg.ReceiptHandle,
-          }))
-          baseLogger.info({ event: 'indexer.message.deleted', messageId: msg.MessageId })
+    if (Messages && Messages.length > 0) {
+      baseLogger.debug({ event: 'indexer.receive_messages', count: Messages.length })
+      await Promise.all(Messages.map(async (msg) => {
+        try {
+          await processMessage(msg)
+          if (msg.ReceiptHandle) {
+            await params.sqs.send(new DeleteMessageCommand({
+              QueueUrl: params.queueUrl,
+              ReceiptHandle: msg.ReceiptHandle,
+            }))
+            baseLogger.info({
+              event: 'indexer.message.deleted',
+              messageId: msg.MessageId,
+            })
+          }
         }
-      }
+        catch (error) {
+          baseLogger.error({
+            event: 'indexer.message.processing_failed',
+            messageId: msg.MessageId,
+            err: error,
+          })
+          // On error, we don't delete the message, so SQS will retry it after visibility timeout
+        }
+      }))
     }
   }
 
   async function runForever() {
     baseLogger.info({ event: 'indexer.start', queueUrl: params.queueUrl })
+    const errorDelay = Number.parseInt(process.env.LOOP_ERROR_DELAY_MS ?? '5000', 10)
 
-    while (true) {
+    // eslint-disable-next-line no-unmodified-loop-condition
+    while (shouldRun) {
       try {
         await runOnce()
       }
       catch (error) {
         baseLogger.error({ event: 'indexer.loop.error', err: error })
-        await new Promise(resolve => setTimeout(resolve, 5000))
+        await new Promise(resolve => setTimeout(resolve, errorDelay))
       }
     }
+
+    baseLogger.info({ event: 'indexer.stop', queueUrl: params.queueUrl })
   }
 
-  return { processMessage, runOnce, runForever }
+  function stop() {
+    shouldRun = false
+  }
+
+  return { processMessage, runOnce, runForever, stop, getStatus: () => ({ shouldRun }) }
 }
 
 let cachedDefaultWorker: ReturnType<typeof createIndexerWorker> | undefined
@@ -274,3 +260,4 @@ const isMain = typeof require !== 'undefined' && require.main === module
 if (isMain) {
   void main()
 }
+export { main }

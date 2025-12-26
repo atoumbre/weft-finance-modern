@@ -17,15 +17,18 @@ importers:
       '@aws-sdk/client-sqs':
         specifier: ^3.954.0
         version: 3.954.0
+      '@local-packages/cdp-liquidator':
+        specifier: workspace:*
+        version: link:../../packages/cdp-liquidator
+      '@local-packages/common-utils':
+        specifier: workspace:*
+        version: link:../../packages/common-utils
       '@radixdlt/babylon-gateway-api-sdk':
         specifier: ^1.10.1
         version: 1.10.1
       '@weft-finance/ledger-state':
         specifier: ^0.0.16
         version: 0.0.16
-      common-utils:
-        specifier: workspace:*
-        version: link:../../packages/common-utils
       decimal.js:
         specifier: ^10.6.0
         version: 10.6.0

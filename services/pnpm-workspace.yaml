@@ -3,8 +3,9 @@ shellEmulator: true
 trustPolicy: no-downgrade
 
 packages:
-  - containers/indexer
-  - containers/liquidator
-  - functions/dispatcher
-  - functions/oracle-updater
-  - 'packages/*'
+  - containers/*
+  - functions/*
+  - packages/*
+onlyBuiltDependencies:
+  - esbuild
+  - secp256k1

@@ -1,13 +1,21 @@
 {
-  "name": "common-utils",
+  "name": "@local-packages/common-utils",
   "version": "1.0.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc"
+    "build": "tsup src/index.ts"
   },
   "dependencies": {
     "pino": "^10.1.0",

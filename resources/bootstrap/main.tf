@@ -21,22 +21,11 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 module "terraform_state_bucket" {
-  source = "../lib/modules/secure_s3_bucket"
+  source = "../modules/secure_s3_bucket"
 
   bucket_name = "admin-terraform-state-${data.aws_caller_identity.current.account_id}"
-
-  # TODO: remove after development is done
-  force_destroy = true
 }
 
-module "artifacts_bucket" {
-  source = "../lib/modules/secure_s3_bucket"
-
-  bucket_name = "admin-misc-artifacts-${data.aws_caller_identity.current.account_id}"
-
-  # TODO: remove after development is done
-  force_destroy = true
-}
 
 
 

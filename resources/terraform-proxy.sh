@@ -8,17 +8,22 @@ TARGET=$1
 
 if [ -z "$TARGET" ]; then
   echo "❌ Error: No target environment specified."
-  echo "Usage: $0 <shared|stokenet|mainnet> [commands...]"
+  echo "Usage: $0 <global|stokenet|mainnet|bootstrap> [commands...]"
   exit 1
 fi
 
-if [ ! -d "$TARGET" ]; then
-  echo "❌ Error: Environment directory '$TARGET' not found."
+# Resolve actual directory
+if [ -d "environments/$TARGET" ]; then
+  TARGET_DIR="environments/$TARGET"
+elif [ -d "$TARGET" ]; then
+  TARGET_DIR="$TARGET"
+else
+  echo "❌ Error: Environment directory for '$TARGET' not found."
   exit 1
 fi
 
 # Shift arguments to pass the rest to terraform
 shift
 
-echo "🚀 Running 'terraform $@' in '$TARGET'..."
-terraform -chdir="$TARGET" "$@"
+echo "🚀 Running 'terraform $@' in '$TARGET_DIR'..."
+terraform -chdir="$TARGET_DIR" "$@"
